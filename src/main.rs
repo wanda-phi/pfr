@@ -11,7 +11,7 @@ use pfr::{
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::PhysicalSize,
-    event::{Event, KeyboardInput, WindowEvent},
+    event::{Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent},
     event_loop::EventLoop,
     window::WindowBuilder,
 };
@@ -160,6 +160,19 @@ fn main() {
                 } => {
                     if let Some(ref mut view) = g.game.view {
                         view.handle_key(*key, *state);
+                    }
+                }
+                Event::WindowEvent {
+                    event: WindowEvent::MouseInput { button, state, .. },
+                    ..
+                } => {
+                    if let Some(ref mut view) = g.game.view {
+                        if &MouseButton::Left == button {
+                            view.handle_key(VirtualKeyCode::LShift, *state);
+                        }
+                        if &MouseButton::Right == button {
+                            view.handle_key(VirtualKeyCode::RShift, *state);
+                        }
                     }
                 }
 
