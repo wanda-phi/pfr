@@ -20,8 +20,8 @@ pub enum Layer {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Rect {
-    pub xy_min: (u16, u16),
-    pub xy_max: (u16, u16),
+    pub xy_min: (i16, i16),
+    pub xy_max: (i16, i16),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -137,7 +137,7 @@ pub struct RollTriggerArea {
 }
 
 impl Rect {
-    pub fn contains(self, pos: (u16, u16)) -> bool {
+    pub fn contains(self, pos: (i16, i16)) -> bool {
         pos.0 >= self.xy_min.0
             && pos.0 <= self.xy_max.0
             && pos.1 >= self.xy_min.1
@@ -618,8 +618,8 @@ pub(super) fn extract_ramps(exe: &MzExe, table: TableId) -> Vec<Ramp> {
 
 #[derive(Copy, Clone, Debug)]
 pub struct BallOutlinePixel {
-    pub x: u16,
-    pub y: u16,
+    pub x: i16,
+    pub y: i16,
     pub angle: u16,
     pub quad: u8,
     pub idx: u8,
@@ -718,8 +718,8 @@ pub(super) fn extract_ball_outline(exe: &MzExe, table: TableId) -> Vec<BallOutli
         assert_eq!(cur_end, pos);
 
         res.push(BallOutlinePixel {
-            x,
-            y,
+            x: x as i16,
+            y: y as i16,
             angle,
             quad,
             idx,
@@ -732,8 +732,8 @@ pub(super) fn extract_ball_outline(exe: &MzExe, table: TableId) -> Vec<BallOutli
 
 fn extract_rect(exe: &MzExe, off: u16) -> Rect {
     Rect {
-        xy_min: (exe.data_word(off), exe.data_word(off + 2)),
-        xy_max: (exe.data_word(off + 4), exe.data_word(off + 6)),
+        xy_min: (exe.data_word_s(off), exe.data_word_s(off + 2)),
+        xy_max: (exe.data_word_s(off + 4), exe.data_word_s(off + 6)),
     }
 }
 

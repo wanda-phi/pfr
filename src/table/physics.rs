@@ -48,8 +48,8 @@ impl PushState {
         }
     }
 
-    pub fn offset(&self) -> u16 {
-        (self.offset_f9 >> 9) as u16
+    pub fn offset(&self) -> i16 {
+        self.offset_f9 >> 9
     }
 }
 
@@ -172,8 +172,8 @@ impl Table {
                 for (fid, flipper) in &self.assets.flippers {
                     let state = &self.flippers[fid];
                     if flipper.ball_bbox.contains(hit_pos) {
-                        let mut dx = hit_pos.0 as i16 - flipper.origin.0 as i16;
-                        let mut dy = hit_pos.1 as i16 - flipper.origin.1 as i16;
+                        let mut dx = hit_pos.0 - flipper.origin.0;
+                        let mut dy = hit_pos.1 - flipper.origin.1;
                         match flipper.side {
                             FlipperSide::Left => {
                                 if dx < 0 {
@@ -286,22 +286,14 @@ impl Table {
             speed_y.min(self.ball.max_speed).max(-self.ball.max_speed),
         );
         if collision.cnt >= 6 {
-            self.ball.pos_hires.0 = self.ball.pos_hires.0.wrapping_add_signed(-cos >> 6);
-            self.ball.pos_hires.1 = self.ball.pos_hires.1.wrapping_add_signed(-sin >> 6);
+            self.ball.pos_hires.0 += -cos >> 6;
+            self.ball.pos_hires.1 += -sin >> 6;
         }
     }
 
     fn ball_move(&mut self) {
-        self.ball.pos_hires = (
-            self.ball
-                .pos_hires
-                .0
-                .wrapping_add_signed(self.ball.speed.0.into()),
-            self.ball
-                .pos_hires
-                .1
-                .wrapping_add_signed(self.ball.speed.1.into()),
-        );
+        self.ball.pos_hires.0 += i32::from(self.ball.speed.0);
+        self.ball.pos_hires.1 += i32::from(self.ball.speed.1);
         if self.ball.pos().1 >= 576 {
             self.drained = true;
         }
@@ -400,7 +392,7 @@ impl Table {
         }
     }
 
-    pub fn ball_center(&self) -> (u16, u16) {
+    pub fn ball_center(&self) -> (i16, i16) {
         let mut pos = self.ball.pos();
         pos.0 += 8;
         pos.1 += 8;

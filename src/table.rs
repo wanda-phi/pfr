@@ -125,7 +125,7 @@ pub struct Table {
     score_cyclone_bonus: Bcd,
     hold_bonus: bool,
 
-    hit_pos: Option<(u16, u16)>,
+    hit_pos: Option<(i16, i16)>,
     hit_bumper: Option<BumperId>,
     roll_trigger: Option<RollTrigger>,
     prev_roll_trigger: Option<RollTrigger>,
@@ -682,8 +682,6 @@ impl View for Table {
         if !self.ball.frozen {
             by += self.push.offset();
         }
-        let bx = usize::from(bx);
-        let by = usize::from(by);
         for y in 0..height {
             let sy = y + self.scroll.pos() as usize + self.push.offset() as usize;
             if sy >= 576 {
@@ -717,10 +715,10 @@ impl View for Table {
                     }
                 }
             }
-            if (by..by + 15).contains(&sy) {
-                let ball_y = sy - by;
+            if (by..by + 15).contains(&(sy as i16)) {
+                let ball_y = sy as i16 - by;
                 for ball_x in 0..15 {
-                    let pix = self.assets.ball.data[(ball_x, ball_y)];
+                    let pix = self.assets.ball.data[(ball_x as usize, ball_y as usize)];
                     if pix == 0 {
                         continue;
                     }
@@ -728,10 +726,10 @@ impl View for Table {
                     if !(0..320).contains(&x) {
                         continue;
                     }
-                    if sy < 576 && self.assets.occmaps[self.ball.layer][(x, sy)] != 0 {
+                    if sy < 576 && self.assets.occmaps[self.ball.layer][(x as usize, sy)] != 0 {
                         continue;
                     }
-                    data[y * 320 + x] = pix;
+                    data[y * 320 + x as usize] = pix;
                 }
             }
         }

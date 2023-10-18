@@ -6,7 +6,7 @@ pub struct ScrollState {
     speed: i16,
     window_height: u16,
     target_special: Option<u16>,
-    ball_target: u16,
+    ball_target: i16,
     attract_up: bool,
 }
 
@@ -36,7 +36,7 @@ impl ScrollState {
         }
     }
 
-    pub fn update(&mut self, ball_y: u16) {
+    pub fn update(&mut self, ball_y: i16) {
         if self.window_height == 576 {
             self.pos = 0;
             return;
@@ -44,16 +44,16 @@ impl ScrollState {
         let target = self.target_special.unwrap_or(if ball_y < self.ball_target {
             0
         } else {
-            (ball_y - self.ball_target).min(576 - self.window_height)
+            ((ball_y - self.ball_target) as u16).min(576 - self.window_height)
         });
         let delta = (target as i16) - (self.raw_pos_f4 >> 4);
         let diff = (delta * self.speed) >> 2;
         self.raw_pos_f4 += diff;
         let delta = (target as i16) - (self.raw_pos_f4 >> 4);
-        if delta <= -(self.ball_target as i16) {
-            self.raw_pos_f4 += (delta + self.ball_target as i16) << 4;
-        } else if delta >= self.ball_target as i16 + 40 {
-            self.raw_pos_f4 += (delta - self.ball_target as i16 - 40) << 4;
+        if delta <= -self.ball_target {
+            self.raw_pos_f4 += (delta + self.ball_target) << 4;
+        } else if delta >= self.ball_target + 40 {
+            self.raw_pos_f4 += (delta - self.ball_target - 40) << 4;
         }
         self.pos = (self.raw_pos_f4 >> 4) as u16;
     }

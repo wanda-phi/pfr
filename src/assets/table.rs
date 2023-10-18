@@ -62,7 +62,7 @@ pub struct Assets {
     pub physmap_patches: EnumMap<PhysmapBind, Option<PhysmapPatch>>,
     pub ramps: Vec<Ramp>,
     pub ball_outline: Vec<BallOutlinePixel>,
-    pub ball_outline_by_angle: Vec<(u16, u16)>,
+    pub ball_outline_by_angle: Vec<(i16, i16)>,
 
     pub lights: EntityVec<LightId, Light>,
     pub attract_lights: EntityVec<AttractLightId, AttractLight>,
@@ -97,8 +97,8 @@ pub struct Assets {
     pub score_jackpot_incr: Bcd,
     pub score_mode_hit_incr: Bcd,
     pub score_mode_ramp_incr: Bcd,
-    pub issue_ball_pos: (u16, u16),
-    pub issue_ball_release_pos: (u16, u16),
+    pub issue_ball_pos: (i16, i16),
+    pub issue_ball_release_pos: (i16, i16),
 }
 
 impl Assets {

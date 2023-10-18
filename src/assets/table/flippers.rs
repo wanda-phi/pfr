@@ -26,7 +26,7 @@ pub struct Flipper {
     pub physmap: Vec<Array2<u8>>,
     pub gfx: Vec<Array2<u8>>,
     pub ball_bbox: Rect,
-    pub origin: (u16, u16),
+    pub origin: (i16, i16),
     pub is_vertical: bool,
     pub quantum_max: u16,
     pub pos_max: i16,
@@ -128,10 +128,10 @@ pub(super) fn extract_flippers(
                     .collect(),
                 gfx,
                 ball_bbox: Rect {
-                    xy_min: (exe.data_word(foff + 0x0a), exe.data_word(foff + 0x0e)),
-                    xy_max: (exe.data_word(foff + 0x0c), exe.data_word(foff + 0x10)),
+                    xy_min: (exe.data_word_s(foff + 0x0a), exe.data_word_s(foff + 0x0e)),
+                    xy_max: (exe.data_word_s(foff + 0x0c), exe.data_word_s(foff + 0x10)),
                 },
-                origin: (exe.data_word(foff + 0x12), exe.data_word(foff + 0x14)),
+                origin: (exe.data_word_s(foff + 0x12), exe.data_word_s(foff + 0x14)),
                 is_vertical: match exe.data_word(foff + 0x16) {
                     0 => false,
                     0xffff => true,
