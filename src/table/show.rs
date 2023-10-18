@@ -150,15 +150,9 @@ impl Table {
     pub fn show_flipper_pressed(&mut self) {}
 
     pub fn show_drained(&mut self) {
-        self.ball.frozen = true;
-        self.flippers_enabled = false;
-        self.in_mode = false;
-        self.in_mode_hit = false;
-        self.in_mode_ramp = false;
         self.effect(EffectBind::Drained);
-        self.sequencer.set_music(0x37);
+        self.set_music_silence();
         self.add_task(TaskKind::DrainSfx);
-        self.in_drain = true;
     }
 
     pub fn show_mode_check(&mut self) {

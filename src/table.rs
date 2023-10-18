@@ -419,11 +419,19 @@ impl View for Table {
                 self.ball_gravity();
                 self.check_transitions();
                 if self.drained && !self.in_drain {
-                    match self.assets.table {
-                        TableId::Table1 => self.party_drained(),
-                        TableId::Table2 => self.speed_drained(),
-                        TableId::Table3 => self.show_drained(),
-                        TableId::Table4 => self.stones_drained(),
+                    self.ball.teleport_freeze(Layer::Ground, (280, 525));
+                    self.flippers_enabled = false;
+                    self.in_mode = false;
+                    self.in_mode_hit = false;
+                    self.in_mode_ramp = false;
+                    if !self.block_drain {
+                        self.in_drain = true;
+                        match self.assets.table {
+                            TableId::Table1 => self.party_drained(),
+                            TableId::Table2 => self.speed_drained(),
+                            TableId::Table3 => self.show_drained(),
+                            TableId::Table4 => self.stones_drained(),
+                        }
                     }
                 }
                 match self.assets.table {

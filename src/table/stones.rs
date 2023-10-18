@@ -232,12 +232,6 @@ impl Table {
     }
 
     pub fn stones_drained(&mut self) {
-        self.ball.frozen = true;
-        self.flippers_enabled = false;
-        self.in_mode = false;
-        self.in_mode_hit = false;
-        self.in_mode_ramp = false;
-        self.in_drain = true;
         self.add_task(TaskKind::DrainSfx);
         self.light_set(LightBind::StonesGhost, 7, false);
         self.sequencer.reset_priority();

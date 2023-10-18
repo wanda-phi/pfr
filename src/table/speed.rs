@@ -118,15 +118,9 @@ impl Table {
     }
 
     pub fn speed_drained(&mut self) {
-        self.ball.frozen = true;
-        self.flippers_enabled = false;
-        self.in_mode = false;
-        self.in_mode_hit = false;
-        self.in_mode_ramp = false;
         self.effect(EffectBind::Drained);
         self.sequencer.reset_priority();
         self.add_task(TaskKind::DrainSfx);
-        self.in_drain = true;
     }
 
     pub fn speed_mode_check(&mut self) {

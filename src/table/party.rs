@@ -202,18 +202,9 @@ impl Table {
     }
 
     pub fn party_drained(&mut self) {
-        self.ball.frozen = true;
-        self.flippers_enabled = false;
-        self.in_mode = false;
-        self.in_mode_hit = false;
-        self.in_mode_ramp = false;
-        if self.block_drain {
-            return;
-        }
-        self.in_drain = true;
         if self.ball_scored_points {
             self.effect(EffectBind::Drained);
-            self.sequencer.set_music(0x3e);
+            self.set_music_silence();
             self.add_task(TaskKind::DrainSfx);
         } else {
             self.start_script(ScriptBind::PartyOn);
