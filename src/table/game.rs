@@ -89,6 +89,7 @@ impl Table {
         self.roll_trigger = None;
         self.at_spring = true;
         self.flipper_pressed = false;
+        self.space_pressed = false;
         self.silence_effect = false;
         self.in_drain = false;
         self.in_mode = false;

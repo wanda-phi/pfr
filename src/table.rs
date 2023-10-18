@@ -451,6 +451,22 @@ impl View for Table {
                         TableId::Table4 => self.stones_flipper_pressed(),
                     }
                 }
+                if self.space_pressed {
+                    self.space_pressed = false;
+                    if !self.cheat.no_tilt && !self.in_plunger && !self.drained && !self.tilted {
+                        self.tilt_counter += 60;
+                        if self.tilt_counter > 120 {
+                            self.tilted = true;
+                            self.flippers_enabled = false;
+                            self.play_jingle_bind_silence(JingleBind::Tilt);
+                            self.start_script(ScriptBind::Tilt);
+                            self.lights.tilt();
+                            self.party.secret_drop_release = true;
+                        } else if self.tilt_counter > 60 {
+                            self.play_jingle_bind(JingleBind::WarnTilt);
+                        }
+                    }
+                }
                 self.dm.blink_frame();
                 self.tasks_frame();
                 self.lights.blink_frame();
@@ -476,28 +492,34 @@ impl View for Table {
             key,
             VirtualKeyCode::LShift | VirtualKeyCode::LControl | VirtualKeyCode::LAlt
         ) {
-            self.flipper_state[FlipperSide::Left] = state == ElementState::Pressed;
-            if state == ElementState::Pressed && self.flippers_enabled {
+            if state == ElementState::Pressed
+                && self.flippers_enabled
+                && !self.flipper_state[FlipperSide::Left]
+            {
                 self.flipper_pressed = true;
                 self.play_sfx_bind(SfxBind::FlipperPress);
             }
+            self.flipper_state[FlipperSide::Left] = state == ElementState::Pressed;
         }
         if matches!(
             key,
             VirtualKeyCode::RShift | VirtualKeyCode::RControl | VirtualKeyCode::RAlt
         ) {
-            self.flipper_state[FlipperSide::Right] = state == ElementState::Pressed;
-            if state == ElementState::Pressed && self.flippers_enabled {
+            if state == ElementState::Pressed
+                && self.flippers_enabled
+                && !self.flipper_state[FlipperSide::Right]
+            {
                 self.flipper_pressed = true;
                 self.play_sfx_bind(SfxBind::FlipperPress);
             }
+            self.flipper_state[FlipperSide::Right] = state == ElementState::Pressed;
         }
 
         if key == VirtualKeyCode::Space {
-            self.space_state = state == ElementState::Pressed;
-            if state == ElementState::Pressed {
+            if state == ElementState::Pressed && !self.space_state {
                 self.space_pressed = true;
             }
+            self.space_state = state == ElementState::Pressed;
         }
 
         if key == VirtualKeyCode::Down {
@@ -586,27 +608,7 @@ impl View for Table {
                     }
                 } else if !self.in_drain {
                     match key {
-                        VirtualKeyCode::Escape if self.at_spring => {
-                            self.abort_game();
-                        }
-                        VirtualKeyCode::Space
-                            if !self.cheat.no_tilt
-                                && !self.in_plunger
-                                && !self.drained
-                                && !self.tilted =>
-                        {
-                            self.tilt_counter += 60;
-                            if self.tilt_counter > 120 {
-                                self.tilted = true;
-                                self.flippers_enabled = false;
-                                self.play_jingle_bind_silence(JingleBind::Tilt);
-                                self.start_script(ScriptBind::Tilt);
-                                self.lights.tilt();
-                                self.party.secret_drop_release = true;
-                            } else if self.tilt_counter > 60 {
-                                self.play_jingle_bind(JingleBind::WarnTilt);
-                            }
-                        }
+                        VirtualKeyCode::Escape if self.at_spring => self.abort_game(),
                         VirtualKeyCode::M => self.toggle_music(),
                         VirtualKeyCode::P => self.pause(),
                         // VirtualKeyCode::W => self.ball.speed = (0, -1000),
