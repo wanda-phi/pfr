@@ -223,7 +223,7 @@ impl Table {
     }
 
     pub fn stones_flipper_pressed(&mut self) {
-        if !self.stones.flipper_lock_key {
+        if !self.stones.flipper_lock_key && self.stones.key_skillshot.is_none() {
             self.light_rotate(LightBind::StonesKey);
         }
         if !self.stones.flipper_lock_rip {
