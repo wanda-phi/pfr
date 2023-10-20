@@ -219,6 +219,7 @@ impl Table {
         self.add_task(TaskKind::PartyDropZoneScroll);
         self.add_task(TaskKind::PartyDropZoneWait);
         self.party.drop_zone_scroll_pos = self.scroll.pos();
+        self.scroll.set_special_target_now(self.scroll.pos());
     }
 
     pub fn party_party(&mut self, which: u8) {
