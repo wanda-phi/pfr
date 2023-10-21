@@ -68,6 +68,7 @@ impl Lights {
     pub fn tilt(&mut self) {
         for light in self.lights.ids() {
             self.lights[light].lit = false;
+            self.lights[light].blink = None;
         }
     }
 
