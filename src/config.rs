@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::PathBuf;
 
 use crate::bcd::Bcd;
 use arrayref::array_ref;
@@ -103,10 +103,9 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn load(data: impl AsRef<Path>) -> Config {
-        let data = data.as_ref();
+    pub fn load(store: &impl ConfigStore) -> Config {
         let mut res = Config::default();
-        if let Ok(cfg) = std::fs::read(data.join("PINBALL.CFG")) {
+        if let Some(cfg) = store.load("PINBALL.CFG") {
             if cfg.len() == 6 {
                 res.options.balls = match cfg[0] {
                     1 => 5,
@@ -133,7 +132,7 @@ impl Config {
             (TableId::Table3, "TABLE3.HI"),
             (TableId::Table4, "TABLE4.HI"),
         ] {
-            if let Ok(hi) = std::fs::read(data.join(file)) {
+            if let Some(hi) = store.load(file) {
                 if hi.len() == 0x40 {
                     for i in 0..4 {
                         let pos = i * 0x10;
@@ -150,7 +149,7 @@ impl Config {
 }
 
 impl Options {
-    pub fn save(&self, data: impl AsRef<Path>) {
+    pub fn save(&self, store: &impl ConfigStore) {
         let raw: [u8; 6] = [
             if self.balls == 5 { 1 } else { 0 },
             if self.angle_high { 0 } else { 1 },
@@ -167,11 +166,11 @@ impl Options {
             },
             u8::from(self.mono),
         ];
-        let _ = std::fs::write(data.as_ref().join("PINBALL.CFG"), raw);
+        store.save("PINBALL.CFG", &raw);
     }
 }
 
-pub fn save_high_scores(table: TableId, scores: [HighScore; 4], data: impl AsRef<Path>) {
+pub fn save_high_scores(table: TableId, scores: [HighScore; 4], store: &impl ConfigStore) {
     let file = match table {
         TableId::Table1 => "TABLE1.HI",
         TableId::Table2 => "TABLE2.HI",
@@ -184,5 +183,30 @@ pub fn save_high_scores(table: TableId, scores: [HighScore; 4], data: impl AsRef
         raw.extend(score.name);
         raw.push(0);
     }
-    let _ = std::fs::write(data.as_ref().join(file), raw);
+    store.save(file, &raw);
+}
+
+pub trait ConfigStore {
+    fn load(&self, fname: &str) -> Option<Vec<u8>>;
+    fn save(&self, fname: &str, data: &[u8]);
+}
+
+pub struct FileConfigStore {
+    pub path: PathBuf,
+}
+
+impl FileConfigStore {
+    pub fn new(path: impl Into<PathBuf>) -> Self {
+        Self { path: path.into() }
+    }
+}
+
+impl ConfigStore for FileConfigStore {
+    fn load(&self, fname: &str) -> Option<Vec<u8>> {
+        std::fs::read(self.path.join(fname)).ok()
+    }
+
+    fn save(&self, fname: &str, data: &[u8]) {
+        let _ = std::fs::write(self.path.join(fname), data);
+    }
 }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use pfr::{
-    config::{save_high_scores, Config, TableId},
+    config::{save_high_scores, Config, FileConfigStore, TableId},
     intro::Intro,
     table::Table,
     view::{Action, Route, View},
@@ -32,7 +32,8 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let config = Config::load(&args.data);
+    let cstore = FileConfigStore::new(&args.data);
+    let config = Config::load(&cstore);
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new()
         .with_title("Pinball Fantasies")
@@ -106,11 +107,11 @@ fn main() {
                 }
                 Action::Exit => g.exit(),
                 Action::SaveOptions(options) => {
-                    options.save(&g.game.args.data);
+                    options.save(&cstore);
                     g.game.config.options = options;
                 }
                 Action::SaveHighScores(table, high_scores) => {
-                    save_high_scores(table, high_scores, &g.game.args.data);
+                    save_high_scores(table, high_scores, &cstore);
                     g.game.config.high_scores[table] = high_scores;
                 }
             }
