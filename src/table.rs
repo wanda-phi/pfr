@@ -1,4 +1,4 @@
-use std::{fs::File, path::Path, sync::Arc};
+use std::sync::Arc;
 
 use arrayvec::ArrayVec;
 use enum_map::{enum_map, EnumMap};
@@ -165,18 +165,11 @@ mod tasks;
 mod triggers;
 
 impl Table {
-    pub fn new(data: &Path, config: Config, table: TableId) -> Table {
+    pub fn new(prg: &[u8], module: &[u8], config: Config, table: TableId) -> Table {
         let options = config.options;
         let high_scores = config.high_scores[table];
-        let (prg, module) = match table {
-            TableId::Table1 => ("TABLE1.PRG", "TABLE1.MOD"),
-            TableId::Table2 => ("TABLE2.PRG", "TABLE2.MOD"),
-            TableId::Table3 => ("TABLE3.PRG", "TABLE3.MOD"),
-            TableId::Table4 => ("TABLE4.PRG", "TABLE4.MOD"),
-        };
-        let mut f = File::open(data.join(module)).unwrap();
-        let assets = Assets::load(data.join(prg), table).unwrap();
-        let module = crate::sound::loader::load(&mut f).unwrap();
+        let assets = Assets::load(prg, table);
+        let module = crate::sound::loader::load(module);
         let sequencer = Arc::new(TableSequencer::new(
             assets.jingle_binds[JingleBind::Attract].unwrap().position,
             assets.position_jingle_start,

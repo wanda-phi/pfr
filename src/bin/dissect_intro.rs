@@ -43,7 +43,8 @@ fn save_png(image: &Image, output_dir: impl AsRef<Path>, name: &str) -> std::io:
 
 fn main() -> std::io::Result<()> {
     let args = Args::parse();
-    let assets = Assets::load(args.input_dir.join("INTRO.PRG"))?;
+    let prg = std::fs::read(args.input_dir.join("INTRO.PRG"))?;
+    let assets = Assets::load(&prg);
     save_png(
         &assets.slides[SlideId::from_idx(0)].image,
         &args.output_dir,

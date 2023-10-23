@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use crate::assets::mz::MzExe;
 
 use super::iff::Image;
@@ -63,8 +61,8 @@ fn get_left_text(exe: &MzExe, off: u16) -> Vec<Vec<u8>> {
 }
 
 impl Assets {
-    pub fn load(file: impl AsRef<Path>) -> std::io::Result<Self> {
-        let exe = MzExe::load(file, 0x80)?;
+    pub fn load(data: &[u8]) -> Self {
+        let exe = MzExe::load(data, 0x80);
 
         let logo0_u = Image::parse(exe.segment(0x3b41));
         let logo0_l = Image::parse(exe.segment(0x4285));
@@ -237,7 +235,7 @@ impl Assets {
         }
         let warp_table = warp_table.into_iter().map(|x| x.unwrap()).collect();
 
-        Ok(Self {
+        Self {
             slides,
             left,
             table1,
@@ -253,7 +251,7 @@ impl Assets {
             left_text_options,
             warp_table,
             warp_frames,
-        })
+        }
     }
 }
 

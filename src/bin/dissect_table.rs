@@ -52,7 +52,8 @@ fn main() -> std::io::Result<()> {
         4 => (TableId::Table4, "TABLE4.PRG"),
         _ => panic!("oops weird table"),
     };
-    let assets = Assets::load(args.input_dir.join(file), table)?;
+    let prg = std::fs::read(args.input_dir.join(file))?;
+    let assets = Assets::load(&prg, table);
     println!("DS: {ds:04x}", ds = assets.exe.ds);
     let mut main_board = assets.main_board.clone();
 

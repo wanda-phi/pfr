@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use arrayref::array_ref;
 
 use crate::bcd::Bcd;
@@ -22,8 +20,7 @@ pub struct FarPtr {
 }
 
 impl MzExe {
-    pub fn load(file: impl AsRef<Path>, ds: u16) -> std::io::Result<Self> {
-        let data = std::fs::read(file)?;
+    pub fn load(data: &[u8], ds: u16) -> Self {
         assert_eq!(&data[..2], b"MZ");
         let sz_last = u16::from_le_bytes(*array_ref![data, 2, 2]) as usize;
         let sz_pages = u16::from_le_bytes(*array_ref![data, 4, 2]) as usize;
@@ -45,7 +42,7 @@ impl MzExe {
                 }
             })
             .collect();
-        Ok(MzExe {
+        MzExe {
             image,
             relocs,
             cs,
@@ -53,7 +50,7 @@ impl MzExe {
             ss,
             sp,
             ds,
-        })
+        }
     }
 
     pub fn segment(&self, seg: u16) -> &[u8] {

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 use arrayvec::ArrayVec;
 use enum_map::EnumMap;
@@ -102,8 +102,8 @@ pub struct Assets {
 }
 
 impl Assets {
-    pub fn load(file: impl AsRef<Path>, table: TableId) -> std::io::Result<Self> {
-        let mut exe = MzExe::load(file, 0)?;
+    pub fn load(data: &[u8], table: TableId) -> Self {
+        let mut exe = MzExe::load(data, 0);
         assert_eq!(exe.code_byte(exe.ip + 0xe), 0xb8);
         let ds = exe.code_word(exe.ip + 0xf);
         exe.ds = ds;
@@ -196,7 +196,7 @@ impl Assets {
         let (roll_triggers, roll_triggers_tilt) = extract_roll_triggers(&exe, table);
         let hit_triggers = extract_hit_triggers(&exe, table);
 
-        Ok(Assets {
+        Assets {
             table,
             exe,
             main_board,
@@ -238,6 +238,6 @@ impl Assets {
             score_mode_ramp_incr,
             issue_ball_pos,
             issue_ball_release_pos,
-        })
+        }
     }
 }

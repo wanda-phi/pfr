@@ -1,5 +1,3 @@
-use std::{fs::File, path::Path};
-
 use unnamed_entity::EntityId;
 use winit::event::{ElementState, VirtualKeyCode};
 
@@ -84,14 +82,8 @@ enum LeftState {
 }
 
 impl Intro {
-    pub fn new(data: &Path, config: Config, table: Option<TableId>) -> Intro {
-        let mut f = File::open(data.join(if table.is_none() {
-            "INTRO.MOD"
-        } else {
-            "MOD2.MOD"
-        }))
-        .unwrap();
-        let module = crate::sound::loader::load(&mut f).unwrap();
+    pub fn new(prg: &[u8], module: &[u8], config: Config, table: Option<TableId>) -> Intro {
+        let module = crate::sound::loader::load(module);
         let player = crate::sound::player::play(module, None);
         let (state, text_page) = match table {
             Some(TableId::Table1 | TableId::Table2) => {
@@ -107,7 +99,7 @@ impl Intro {
         };
         Intro {
             player,
-            assets: Assets::load(data.join("INTRO.PRG")).unwrap(),
+            assets: Assets::load(prg),
             config,
             state,
             text_page,

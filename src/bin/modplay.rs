@@ -3,7 +3,7 @@ use pfr::{
     assets::table::sound::{Jingle, Sfx},
     sound::controller::TableSequencer,
 };
-use std::{fs::File, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 #[derive(Parser)]
 struct Args {
@@ -12,8 +12,8 @@ struct Args {
 
 fn main() -> std::io::Result<()> {
     let args = Args::parse();
-    let mut f = File::open(args.modfile)?;
-    let module = pfr::sound::loader::load(&mut f)?;
+    let moddata = std::fs::read(args.modfile)?;
+    let module = pfr::sound::loader::load(&moddata);
     let sequencer = Arc::new(TableSequencer::new(0, 0, 0, false));
     let player = pfr::sound::player::play(module, Some(sequencer.clone()));
     // println!("NAME: {}", module.name);

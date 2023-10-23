@@ -78,12 +78,22 @@ fn main() {
             match action {
                 Action::None => {}
                 Action::Navigate(route) => {
+                    let (prg, module) = match route {
+                        Route::Intro(None) => ("INTRO.PRG", "INTRO.MOD"),
+                        Route::Intro(Some(_)) => ("INTRO.PRG", "MOD2.MOD"),
+                        Route::Table(TableId::Table1) => ("TABLE1.PRG", "TABLE1.MOD"),
+                        Route::Table(TableId::Table2) => ("TABLE2.PRG", "TABLE2.MOD"),
+                        Route::Table(TableId::Table3) => ("TABLE3.PRG", "TABLE3.MOD"),
+                        Route::Table(TableId::Table4) => ("TABLE4.PRG", "TABLE4.MOD"),
+                    };
+                    let prgdata = std::fs::read(g.game.args.data.join(prg)).unwrap();
+                    let moddata = std::fs::read(g.game.args.data.join(module)).unwrap();
                     let view: Box<dyn View> = match route {
                         Route::Intro(table) => {
-                            Box::new(Intro::new(&g.game.args.data, g.game.config, table))
+                            Box::new(Intro::new(&prgdata, &moddata, g.game.config, table))
                         }
                         Route::Table(table) => {
-                            Box::new(Table::new(&g.game.args.data, g.game.config, table))
+                            Box::new(Table::new(&prgdata, &moddata, g.game.config, table))
                         }
                     };
                     g.set_updates_per_second(view.get_fps());

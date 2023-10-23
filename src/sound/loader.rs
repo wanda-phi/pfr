@@ -1,9 +1,4 @@
-use std::{
-    array,
-    io::{self, Read, Seek},
-    num::NonZeroU8,
-    str,
-};
+use std::{array, num::NonZeroU8, str};
 
 use arrayref::array_ref;
 
@@ -121,10 +116,9 @@ impl From<u32> for Note {
     }
 }
 
-pub fn load(f: &mut (impl Read + Seek)) -> io::Result<Mod> {
-    let mut name = [0; 20];
-    f.read_exact(&mut name)?;
-    let name = str::from_utf8(&name)
+pub fn load(data: &[u8]) -> Mod {
+    assert!(data.len() > 1080);
+    let name = str::from_utf8(&data[..20])
         .unwrap()
         .trim_end_matches('\0')
         .to_string();
@@ -136,9 +130,10 @@ pub fn load(f: &mut (impl Read + Seek)) -> io::Result<Mod> {
         volume: 0,
         repeat: None,
     }];
+    let mut pos = 20;
     for _ in 0..31 {
-        let mut buf = [0; 30];
-        f.read_exact(&mut buf)?;
+        let buf = &data[pos..pos + 30];
+        pos += 30;
         sample_lens.push(u16::from_be_bytes(*array_ref![buf, 22, 2]) as usize * 2);
         assert_eq!(buf[24] & 0xf0, 0);
         let rep_pos = u16::from_be_bytes(*array_ref![buf, 26, 2]) as usize * 2;
@@ -159,8 +154,8 @@ pub fn load(f: &mut (impl Read + Seek)) -> io::Result<Mod> {
             repeat,
         });
     }
-    let mut buf = [0; 134];
-    f.read_exact(&mut buf)?;
+    let buf = &data[pos..pos + 134];
+    pos += 134;
     let song_len = buf[0];
     let pos_restart = if buf[1] == 127 { 0 } else { buf[1] };
     assert!(song_len <= 128);
@@ -171,8 +166,8 @@ pub fn load(f: &mut (impl Read + Seek)) -> io::Result<Mod> {
     let positions = positions[..song_len as usize].to_vec();
     let mut patterns = vec![];
     for _ in 0..num_patterns {
-        let mut buf = [0; 0x400];
-        f.read_exact(&mut buf)?;
+        let buf = &data[pos..pos + 0x400];
+        pos += 0x400;
         patterns.push(array::from_fn(|pat| {
             array::from_fn(|ch| {
                 let pos = pat << 4 | ch << 2;
@@ -184,15 +179,14 @@ pub fn load(f: &mut (impl Read + Seek)) -> io::Result<Mod> {
         if len <= 2 {
             continue;
         }
-        let mut data = vec![0; len];
-        f.read_exact(&mut data)?;
-        sample.data = data;
+        sample.data = data[pos..pos + len].to_vec();
+        pos += len;
     }
-    Ok(Mod {
+    Mod {
         name,
         samples,
         patterns,
         positions,
         pos_restart,
-    })
+    }
 }
