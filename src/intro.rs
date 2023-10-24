@@ -694,11 +694,11 @@ impl View for Intro {
             return;
         }
         match key {
-            VirtualKeyCode::F1 => self.key = KeyPress::Table(TableId::Table1),
-            VirtualKeyCode::F2 => self.key = KeyPress::Table(TableId::Table2),
-            VirtualKeyCode::F3 => self.key = KeyPress::Table(TableId::Table3),
-            VirtualKeyCode::F4 => self.key = KeyPress::Table(TableId::Table4),
-            VirtualKeyCode::F5 => self.key = KeyPress::Options,
+            VirtualKeyCode::F1 | VirtualKeyCode::Key1 => self.key = KeyPress::Table(TableId::Table1),
+            VirtualKeyCode::F2 | VirtualKeyCode::Key2 => self.key = KeyPress::Table(TableId::Table2),
+            VirtualKeyCode::F3 | VirtualKeyCode::Key3 => self.key = KeyPress::Table(TableId::Table3),
+            VirtualKeyCode::F4 | VirtualKeyCode::Key4 => self.key = KeyPress::Table(TableId::Table4),
+            VirtualKeyCode::F5 | VirtualKeyCode::Key5 => self.key = KeyPress::Options,
             VirtualKeyCode::Escape => self.key = KeyPress::Escape,
             VirtualKeyCode::Return => self.key = KeyPress::Enter,
             VirtualKeyCode::Space => self.key = KeyPress::Space,
