@@ -27,7 +27,7 @@ pub enum TaskKind {
     PartyDropZoneStart(u16),
     PartyDropZoneWait,
     PartyDropZoneRelease,
-    PartyDropZoneScroll,
+    PartyDropZoneScroll(u16),
     PartyResetArcadeButton,
     PartyOrbitRightUnblink,
     PartyMadUnblink(u8),
@@ -142,12 +142,10 @@ impl Task {
                 table.play_sfx_bind(SfxBind::IssueBall);
                 table.light_set_all(LightBind::PartyDrop, false);
             }
-            TaskKind::PartyDropZoneScroll => {
-                if table.party.drop_zone_scroll_pos >= 5 {
-                    table.party.drop_zone_scroll_pos -= 5;
-                    table
-                        .scroll
-                        .set_special_target_now(table.party.drop_zone_scroll_pos);
+            TaskKind::PartyDropZoneScroll(ref mut pos) => {
+                if *pos >= 5 {
+                    *pos -= 5;
+                    table.scroll.set_special_target_now(*pos);
                     return true;
                 } else {
                     table.scroll.set_special_target_now(0);
@@ -505,7 +503,7 @@ impl TaskKind {
             TaskKind::PartyDropZoneStart(delay) => delay,
             TaskKind::PartyDropZoneWait => 30,
             TaskKind::PartyDropZoneRelease => 27,
-            TaskKind::PartyDropZoneScroll => 0,
+            TaskKind::PartyDropZoneScroll(_) => 0,
             TaskKind::PartyOrbitRightUnblink => 120,
             TaskKind::PartyMadUnblink(_) => 14,
             TaskKind::PartyMadAllUnblink => 120,

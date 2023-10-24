@@ -15,9 +15,6 @@ use super::{tasks::TaskKind, Table};
 pub struct PartyState {
     pub flipper_lock_puke: bool,
 
-    pub drop_zone_delay: u16,
-    pub drop_zone_scroll_pos: u16,
-
     pub orbit_right_cycle: u8,
     pub orbit_right_blinking: bool,
     pub orbit_right_mb: bool,
@@ -65,9 +62,6 @@ impl PartyState {
     pub fn new() -> Self {
         Self {
             flipper_lock_puke: false,
-
-            drop_zone_delay: 0,
-            drop_zone_scroll_pos: 0,
 
             orbit_right_cycle: 0,
             orbit_right_blinking: false,
@@ -214,12 +208,15 @@ impl Table {
         }
     }
 
+    fn party_start_drop_zone_scroll(&mut self) {
+        self.add_task(TaskKind::PartyDropZoneScroll(self.scroll.pos()));
+        self.scroll.set_special_target_now(self.scroll.pos());
+    }
+
     pub fn party_start_drop_zone(&mut self) {
         self.ball.teleport(Layer::Ground, (15, 47), (0, 0));
-        self.add_task(TaskKind::PartyDropZoneScroll);
         self.add_task(TaskKind::PartyDropZoneWait);
-        self.party.drop_zone_scroll_pos = self.scroll.pos();
-        self.scroll.set_special_target_now(self.scroll.pos());
+        self.party_start_drop_zone_scroll();
     }
 
     pub fn party_party(&mut self, which: u8) {
@@ -492,7 +489,7 @@ impl Table {
             self.effect(EffectBind::PartyTunnel5M);
             self.party.timeout_tunnel = 1440;
         }
-        self.add_task(TaskKind::PartyDropZoneScroll);
+        self.party_start_drop_zone_scroll();
         self.add_task(TaskKind::PartyDropZoneStart(if self.in_mode {
             0
         } else {
@@ -525,7 +522,7 @@ impl Table {
             self.party.arcade_ready = true;
             self.party_arcade_pick_reward();
         }
-        self.add_task(TaskKind::PartyDropZoneScroll);
+        self.party_start_drop_zone_scroll();
         self.ball.teleport(Layer::Ground, (15, 47), (0, 0));
     }
 
