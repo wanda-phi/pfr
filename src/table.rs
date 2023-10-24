@@ -560,23 +560,23 @@ impl View for Table {
         match self.kbd_state {
             KbdState::Main => {
                 match key {
-                    VirtualKeyCode::F9 => self.scroll.set_speed(9),
-                    VirtualKeyCode::F10 => self.scroll.set_speed(11),
-                    VirtualKeyCode::F11 => self.scroll.set_speed(20),
-                    VirtualKeyCode::F12 => self.scroll.set_speed(40),
+                    VirtualKeyCode::F9 | VirtualKeyCode::Key9 => self.scroll.set_speed(9),
+                    VirtualKeyCode::F10 | VirtualKeyCode::Key0 => self.scroll.set_speed(11),
+                    VirtualKeyCode::F11 | VirtualKeyCode::Minus => self.scroll.set_speed(20),
+                    VirtualKeyCode::F12 | VirtualKeyCode::Equals => self.scroll.set_speed(40),
                     _ => (),
                 }
 
                 if self.start_keys_active && (self.in_attract || self.at_spring) {
                     match key {
-                        VirtualKeyCode::F1 => self.start_key = Some(1),
-                        VirtualKeyCode::F2 => self.start_key = Some(2),
-                        VirtualKeyCode::F3 => self.start_key = Some(3),
-                        VirtualKeyCode::F4 => self.start_key = Some(4),
-                        VirtualKeyCode::F5 => self.start_key = Some(5),
-                        VirtualKeyCode::F6 => self.start_key = Some(6),
-                        VirtualKeyCode::F7 => self.start_key = Some(7),
-                        VirtualKeyCode::F8 => self.start_key = Some(8),
+                        VirtualKeyCode::F1 | VirtualKeyCode::Key1 => self.start_key = Some(1),
+                        VirtualKeyCode::F2 | VirtualKeyCode::Key2 => self.start_key = Some(2),
+                        VirtualKeyCode::F3 | VirtualKeyCode::Key3 => self.start_key = Some(3),
+                        VirtualKeyCode::F4 | VirtualKeyCode::Key4 => self.start_key = Some(4),
+                        VirtualKeyCode::F5 | VirtualKeyCode::Key5 => self.start_key = Some(5),
+                        VirtualKeyCode::F6 | VirtualKeyCode::Key6 => self.start_key = Some(6),
+                        VirtualKeyCode::F7 | VirtualKeyCode::Key7 => self.start_key = Some(7),
+                        VirtualKeyCode::F8 | VirtualKeyCode::Key8 => self.start_key = Some(8),
                         VirtualKeyCode::Return => {
                             if self.in_attract {
                                 self.start_key = Some(1);
