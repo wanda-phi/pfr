@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <title>pfr</title>
+  <style type="text/css">
+    body {
+        background-color: #000;
+        margin: 0;
+        overflow: hidden;
+    }
+    .start {
+    	text-align: center;
+    	font-size: 72px;
+    	color: #fff;
+    	cursor: crosshair; /* it's cute */
+    	height: 100%;
+    	width: 100%;
+    	position: fixed;
+    	z-index: 101;
+    }
+    .hidden {
+    	display: none;
+    }
+    canvas {
+    	cursor: none;
+    	/* below fixes weird behavior w/ resizable winit windows */
+    	position: absolute;
+    	top: 0;
+    	left: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="start">Click to start!</div>
+  <script type="module">
+  	document.oncontextmenu = function() {return false;} // buggy, but we can't do better
+
+	window.get_asset = function(a) {
+	  	return(window.assets[a]);
+  	};
+
+  	window.bind_mobile_events = function() {
+  		//const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  		const isMobile = true;
+  		window.canvas = document.querySelector("canvas");
+  		if (isMobile) {
+  			window.canvas.style.width = "100%";
+  			window.canvas.style.height = "100%";
+		}
+		return isMobile;
+  	}
+  	
+  	window.assets = [];
+  	let promises = [];
+
+	[
+	  "TABLE4.PRG",
+	  "TABLE3.PRG",
+	  "TABLE2.PRG",
+	  "TABLE1.PRG",
+	  "TABLE1.MOD",
+	  "TABLE2.MOD",
+	  "TABLE3.MOD",
+	  "TABLE4.MOD",
+	  "INTRO.MOD",
+	  "INTRO.PRG",
+	  "MOD2.MOD"
+	].forEach(file => {
+	  promises.push(fetch(`/${file}`)
+	    .then(response => response.arrayBuffer())
+	    .then(buffer => {
+	      window.assets[file] = new Uint8Array(buffer);
+	    }));
+	})
+
+	import init from "./pfr.js";
+
+	Promise.all(promises).then(() => {
+		let start = document.querySelector(".start");
+		start.addEventListener("click", () => {
+			init();
+			start.style="display:none;";
+		});
+	})
+
+  </script>
+
+</body>
+
+</html>
