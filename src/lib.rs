@@ -6,3 +6,6 @@ pub mod intro;
 pub mod sound;
 pub mod table;
 pub mod view;
+
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
