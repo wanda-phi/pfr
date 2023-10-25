@@ -118,6 +118,7 @@ impl Table {
     }
 
     pub fn speed_drained(&mut self) {
+        self.sequencer.reset_priority();
         self.effect(EffectBind::Drained);
         self.sequencer.reset_priority();
         self.add_task(TaskKind::DrainSfx);

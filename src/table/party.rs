@@ -197,6 +197,7 @@ impl Table {
 
     pub fn party_drained(&mut self) {
         if self.ball_scored_points {
+            self.sequencer.reset_priority();
             self.effect(EffectBind::Drained);
             self.set_music_silence();
             self.add_task(TaskKind::DrainSfx);

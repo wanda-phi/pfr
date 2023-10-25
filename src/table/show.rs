@@ -150,6 +150,7 @@ impl Table {
     pub fn show_flipper_pressed(&mut self) {}
 
     pub fn show_drained(&mut self) {
+        self.sequencer.reset_priority();
         self.effect(EffectBind::Drained);
         self.set_music_silence();
         self.add_task(TaskKind::DrainSfx);
