@@ -119,7 +119,7 @@ impl Intro {
         }
     }
 
-    fn render_left_text(&self, data: &mut [u8], num: usize, is_options: bool) {
+    fn render_left_text(&self, data: &mut [u8], base_y: usize, num: usize, is_options: bool) {
         let text = if is_options {
             &self.assets.left_text_options
         } else {
@@ -128,7 +128,7 @@ impl Intro {
         for (ty, line) in text.iter().enumerate() {
             for (tx, &chr) in line.iter().enumerate() {
                 if ty * 12 + tx < num {
-                    let y = 97 + 9 * ty;
+                    let y = base_y + 9 * ty;
                     let x = 16 + 8 * tx;
                     for cy in 0..8 {
                         let byte = CGA_FONT[chr as usize][cy];
@@ -155,62 +155,100 @@ impl Intro {
         }
     }
 
-    fn render_left(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)]) {
-        for y in 0..480 {
-            for x in 0..self.assets.left.data.dim().0 {
-                let pixel = &mut data[y * 640 + x];
-                *pixel = self.assets.left.data[(x, y / 2)];
+    fn render_left(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)], offset: usize) {
+        pal[..16].copy_from_slice(&self.assets.left.cmap);
+        if self.config.options.resolution == Resolution::Full {
+            for y in 0..960 {
+                let sy = match y {
+                    0..=373 => y / 2,
+                    374..=854 => 186,
+                    _ => (y - 480) / 2,
+                };
+                for x in offset..self.assets.left.data.dim().0 {
+                    let pixel = &mut data[y * 640 + x - offset];
+                    *pixel = self.assets.left.data[(x, sy)];
+                }
+            }
+            if offset == 0 {
+                self.render_left_text(
+                    data,
+                    187 + 70,
+                    120,
+                    matches!(
+                        self.state,
+                        State::Options(_) | State::OptionsFadeIn(_) | State::OptionsFadeOut(_)
+                    ),
+                );
+            }
+        } else {
+            for y in 0..480 {
+                for x in offset..self.assets.left.data.dim().0 {
+                    let pixel = &mut data[y * 640 + x - offset];
+                    *pixel = self.assets.left.data[(x, y / 2)];
+                }
+            }
+            match self.left_state {
+                LeftState::None | LeftState::Image(_) => {}
+                LeftState::ImageOut(n) => {
+                    self.clear_left(data, n as usize);
+                }
+                LeftState::TextIn(n, is_options) => {
+                    self.clear_left(data, 90);
+                    self.render_left_text(data, 97, n as usize, is_options);
+                }
+                LeftState::Text(_, is_options) => {
+                    self.clear_left(data, 90);
+                    self.render_left_text(data, 97, 120, is_options);
+                }
+                LeftState::TextOut(n, is_options) => {
+                    self.clear_left(data, 90);
+                    self.render_left_text(data, 97, 120, is_options);
+                    self.unclear_left(data, n as usize);
+                }
             }
         }
-        pal[..16].copy_from_slice(&self.assets.left.cmap);
-        match self.left_state {
-            LeftState::None | LeftState::Image(_) => {}
-            LeftState::ImageOut(n) => {
-                self.clear_left(data, n as usize);
-            }
-            LeftState::TextIn(n, is_options) => {
-                self.clear_left(data, 90);
-                self.render_left_text(data, n as usize, is_options);
-            }
-            LeftState::Text(_, is_options) => {
-                self.clear_left(data, 90);
-                self.render_left_text(data, 120, is_options);
-            }
-            LeftState::TextOut(n, is_options) => {
-                self.clear_left(data, 90);
-                self.render_left_text(data, 120, is_options);
-                self.unclear_left(data, n as usize);
+    }
+
+    fn render_table(
+        &self,
+        data: &mut [u8],
+        pal: &mut [(u8, u8, u8)],
+        f: impl Fn(usize) -> bool,
+        table: TableId,
+        base: usize,
+        flip: bool,
+    ) {
+        let (pal_base, img) = match table {
+            TableId::Table1 => (0x10, &self.assets.table1),
+            TableId::Table2 => (0x20, &self.assets.table2),
+            TableId::Table3 => (0x30, &self.assets.table3),
+            TableId::Table4 => (0x40, &self.assets.table4),
+        };
+        pal[pal_base..pal_base + 0x10].copy_from_slice(&img.cmap);
+        for y in 0..95 {
+            if f(if flip { 94 - y } else { y }) {
+                for x in 0..440 {
+                    let pidx = (base + y) * 2 * 640 + 160 + x;
+                    let pix = img.data[(x, y)] | (pal_base as u8);
+                    data[pidx] = pix;
+                    data[pidx + 640] = pix;
+                }
             }
         }
     }
 
     fn render_tables(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)], f: impl Fn(usize) -> bool) {
-        let (t1, t2) = if self.text_page.to_idx() % 2 == 0 {
-            (&self.assets.table1, &self.assets.table2)
+        if self.config.options.resolution == Resolution::Full {
+            self.render_table(data, pal, &f, TableId::Table1, 12, false);
+            self.render_table(data, pal, &f, TableId::Table2, 132, false);
+            self.render_table(data, pal, &f, TableId::Table3, 252, true);
+            self.render_table(data, pal, &f, TableId::Table4, 372, true);
+        } else if self.text_page.to_idx() % 2 == 0 {
+            self.render_table(data, pal, &f, TableId::Table1, 10, false);
+            self.render_table(data, pal, &f, TableId::Table2, 135, true);
         } else {
-            (&self.assets.table3, &self.assets.table4)
-        };
-        pal[0x10..0x20].copy_from_slice(&t1.cmap);
-        pal[0x20..0x30].copy_from_slice(&t2.cmap);
-        for y in 0..95 {
-            if f(y) {
-                for x in 0..440 {
-                    let pidx = (10 + y) * 2 * 640 + 160 + x;
-                    let pix = t1.data[(x, y)] | 0x10;
-                    data[pidx] = pix;
-                    data[pidx + 640] = pix;
-                }
-            }
-        }
-        for y in 0..95 {
-            if f(94 - y) {
-                for x in 0..440 {
-                    let pidx = (135 + y) * 2 * 640 + 160 + x;
-                    let pix = t2.data[(x, y)] | 0x20;
-                    data[pidx] = pix;
-                    data[pidx + 640] = pix;
-                }
-            }
+            self.render_table(data, pal, &f, TableId::Table3, 10, false);
+            self.render_table(data, pal, &f, TableId::Table4, 135, true);
         }
     }
 
@@ -280,20 +318,32 @@ impl Intro {
                         data[pidx + 640] = pix | 0x10;
                     }
                 }
-                match tset {
-                    TableSet::Table12 => {
-                        self.render_hiscores(data, font, TableId::Table1, 42);
-                        self.render_hiscores(data, font, TableId::Table2, 150);
-                    }
-                    TableSet::Table34 => {
-                        self.render_hiscores(data, font, TableId::Table3, 42);
-                        self.render_hiscores(data, font, TableId::Table4, 150);
+                if self.config.options.resolution == Resolution::Full {
+                    self.render_hiscores(data, font, TableId::Table1, 42);
+                    self.render_hiscores(data, font, TableId::Table2, 150);
+                    self.render_hiscores(data, font, TableId::Table3, 258);
+                    self.render_hiscores(data, font, TableId::Table4, 366);
+                } else {
+                    match tset {
+                        TableSet::Table12 => {
+                            self.render_hiscores(data, font, TableId::Table1, 42);
+                            self.render_hiscores(data, font, TableId::Table2, 150);
+                        }
+                        TableSet::Table34 => {
+                            self.render_hiscores(data, font, TableId::Table3, 42);
+                            self.render_hiscores(data, font, TableId::Table4, 150);
+                        }
                     }
                 }
             }
             crate::assets::intro::TextPage::Text(text) => {
+                let base = if self.config.options.resolution == Resolution::Full {
+                    120
+                } else {
+                    0
+                };
                 for (ty, line) in text.iter().enumerate() {
-                    self.render_line(data, font, line, 14 + ty * 18);
+                    self.render_line(data, font, line, 14 + ty * 18 + base);
                 }
             }
         }
@@ -306,6 +356,11 @@ impl Intro {
         lq: bool,
         cursor: Option<u8>,
     ) {
+        let base = if self.config.options.resolution == Resolution::Full {
+            120
+        } else {
+            0
+        };
         let font = if lq {
             &self.assets.font_lq
         } else {
@@ -358,12 +413,12 @@ impl Intro {
         }
 
         for (ty, line) in lines.into_iter().enumerate() {
-            self.render_line(data, font, &line, 14 + ty * 18);
+            self.render_line(data, font, &line, base + 14 + ty * 18);
         }
 
         if let Some(cursor) = cursor {
             let pos = if cursor == 6 { 9 } else { cursor as usize + 2 };
-            self.render_char(data, font, b'>', 175, 14 + pos * 18);
+            self.render_char(data, font, b'>', 175, base + 14 + pos * 18);
         }
     }
 
@@ -391,7 +446,11 @@ fn fade_pal(
 
 impl View for Intro {
     fn get_resolution(&self) -> (u32, u32) {
-        (640, 480)
+        if self.config.options.resolution == Resolution::Full {
+            (640, 960)
+        } else {
+            (640, 480)
+        }
     }
 
     fn get_fps(&self) -> u32 {
@@ -694,10 +753,18 @@ impl View for Intro {
             return;
         }
         match key {
-            VirtualKeyCode::F1 | VirtualKeyCode::Key1 => self.key = KeyPress::Table(TableId::Table1),
-            VirtualKeyCode::F2 | VirtualKeyCode::Key2 => self.key = KeyPress::Table(TableId::Table2),
-            VirtualKeyCode::F3 | VirtualKeyCode::Key3 => self.key = KeyPress::Table(TableId::Table3),
-            VirtualKeyCode::F4 | VirtualKeyCode::Key4 => self.key = KeyPress::Table(TableId::Table4),
+            VirtualKeyCode::F1 | VirtualKeyCode::Key1 => {
+                self.key = KeyPress::Table(TableId::Table1)
+            }
+            VirtualKeyCode::F2 | VirtualKeyCode::Key2 => {
+                self.key = KeyPress::Table(TableId::Table2)
+            }
+            VirtualKeyCode::F3 | VirtualKeyCode::Key3 => {
+                self.key = KeyPress::Table(TableId::Table3)
+            }
+            VirtualKeyCode::F4 | VirtualKeyCode::Key4 => {
+                self.key = KeyPress::Table(TableId::Table4)
+            }
             VirtualKeyCode::F5 | VirtualKeyCode::Key5 => self.key = KeyPress::Options,
             VirtualKeyCode::Escape => self.key = KeyPress::Escape,
             VirtualKeyCode::Return => self.key = KeyPress::Enter,
@@ -710,15 +777,20 @@ impl View for Intro {
 
     fn render(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)]) {
         match self.state {
-            State::Slide(slide, sstate) => {
-                let slide = &self.assets.slides[slide];
+            State::Slide(sidx, sstate) => {
+                let base = if self.config.options.resolution == Resolution::Full {
+                    240
+                } else {
+                    0
+                };
+                let slide = &self.assets.slides[sidx];
                 let img = &slide.image;
                 match img.data.dim().0 {
                     320 => {
                         assert_eq!(img.data.dim().1, 240);
                         for y in 0..480 {
                             for x in 0..640 {
-                                data[x + y * 640] = img.data[(x / 2, y / 2)];
+                                data[x + (base + y) * 640] = img.data[(x / 2, y / 2)];
                             }
                         }
                     }
@@ -726,7 +798,7 @@ impl View for Intro {
                         assert_eq!(img.data.dim().1, 480);
                         for y in 0..480 {
                             for x in 0..640 {
-                                data[x + y * 640] = img.data[(x, y)];
+                                data[x + (base + y) * 640] = img.data[(x, y)];
                             }
                         }
                     }
@@ -770,42 +842,31 @@ impl View for Intro {
                 pal.fill((0, 0, 0));
             }
             State::Left(delta) => {
-                let delta = delta as usize;
-                for y in 0..480 {
-                    for x in 0..640 {
-                        let pixel = &mut data[y * 640 + x];
-                        if x + delta < self.assets.left.data.dim().0 {
-                            *pixel = self.assets.left.data[(x + delta, y / 2)];
-                        } else {
-                            *pixel = 0;
-                        }
-                    }
-                }
-                pal[..16].copy_from_slice(&self.assets.left.cmap);
+                self.render_left(data, pal, delta as usize);
             }
             State::TablesGap(_) | State::TextGap(_) | State::OptionsGap(_) => {
-                self.render_left(data, pal)
+                self.render_left(data, pal, 0);
             }
             State::TablesWarpIn(n) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_tables(data, pal, |i| self.assets.warp_table[i] < n);
             }
             State::Tables(_) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_tables(data, pal, |_| true);
             }
             State::TablesWarpOut(n, _) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_tables(data, pal, |i| self.assets.warp_table[94 - i] >= n);
             }
             State::TablesFadeOut(n, _) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_tables(data, pal, |_| true);
                 let opal = pal.to_vec();
                 fade_pal(pal, &opal, (0, 0, 0), (80 - n) as usize, 80);
             }
             State::TextFadeIn(n) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_text(data, pal, true);
                 for pe in &mut pal[0x10..0x20] {
                     pe.0 = (pe.0 as u32 * (n as u32) / 20) as u8;
@@ -814,11 +875,11 @@ impl View for Intro {
                 }
             }
             State::Text(_) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_text(data, pal, false);
             }
             State::TextFadeOut(n, _) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_text(data, pal, true);
                 for pe in &mut pal[0x10..0x20] {
                     pe.0 = (pe.0 as u32 * (19 - n as u32) / 20) as u8;
@@ -827,7 +888,7 @@ impl View for Intro {
                 }
             }
             State::OptionsFadeIn(n) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_options(data, pal, true, None);
                 for pe in &mut pal[0x10..0x20] {
                     pe.0 = (pe.0 as u32 * (n as u32) / 40) as u8;
@@ -836,11 +897,11 @@ impl View for Intro {
                 }
             }
             State::Options(cursor) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_options(data, pal, false, Some(cursor));
             }
             State::OptionsFadeOut(n) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 self.render_options(data, pal, true, None);
                 for pe in &mut pal[0x10..0x20] {
                     pe.0 = (pe.0 as u32 * (39 - n as u32) / 40) as u8;
@@ -849,7 +910,7 @@ impl View for Intro {
                 }
             }
             State::FadeOut(n, _) => {
-                self.render_left(data, pal);
+                self.render_left(data, pal, 0);
                 let opal = pal.to_vec();
                 fade_pal(pal, &opal, (0, 0, 0), (80 - n) as usize, 80);
             }
