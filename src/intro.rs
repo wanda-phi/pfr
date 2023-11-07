@@ -356,10 +356,10 @@ impl Intro {
         lq: bool,
         cursor: Option<u8>,
     ) {
-        let base = if self.config.options.resolution == Resolution::Full {
-            120
+        let pitch = if self.config.options.resolution == Resolution::Full {
+            36
         } else {
-            0
+            18
         };
         let font = if lq {
             &self.assets.font_lq
@@ -413,17 +413,28 @@ impl Intro {
         }
 
         for (ty, line) in lines.into_iter().enumerate() {
-            self.render_line(data, font, &line, base + 14 + ty * 18);
+            self.render_line(data, font, &line, 14 + ty * pitch);
         }
 
         if let Some(cursor) = cursor {
             let pos = if cursor == 6 { 9 } else { cursor as usize + 2 };
-            self.render_char(data, font, b'>', 175, base + 14 + pos * 18);
+            self.render_char(data, font, b'>', 175, 14 + pos * pitch);
         }
     }
 
     fn next_page(&mut self) {
-        self.text_page += 1;
+        if self.config.options.resolution == Resolution::Full {
+            self.text_page = TextPageId::from_idx(match self.text_page.to_idx() {
+                0 | 1 => 2,
+                2 => 3,
+                3 => 4,
+                4 | 5 => 6,
+                6 => 7,
+                _ => 0,
+            });
+        } else {
+            self.text_page += 1;
+        }
         if self.text_page == self.assets.text_pages.next_id() {
             self.text_page = TextPageId::from_idx(0);
         }
