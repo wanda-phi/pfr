@@ -39,6 +39,16 @@ pub enum ScrollSpeed {
     Soft,
 }
 
+impl ScrollSpeed {
+    pub fn to_raw_speed(self) -> i16 {
+        match self {
+            ScrollSpeed::Hard => 20,
+            ScrollSpeed::Medium => 11,
+            ScrollSpeed::Soft => 9,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Resolution {
     Normal,

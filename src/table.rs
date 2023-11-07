@@ -16,7 +16,7 @@ use crate::{
         Assets,
     },
     bcd::Bcd,
-    config::{Config, HighScore, Options, Resolution, TableId},
+    config::{Config, HighScore, Options, Resolution, ScrollSpeed, TableId},
     sound::{controller::TableSequencer, player::Player},
     view::{Action, Route, View},
 };
@@ -91,6 +91,7 @@ pub struct Table {
     mode_timeout_secs: u8,
 
     kbd_state: KbdState,
+    pause_cycle: u16,
     flipper_state: EnumMap<FlipperSide, bool>,
     flipper_pressed: bool,
     flippers_enabled: bool,
@@ -251,6 +252,7 @@ impl Table {
             mode_timeout_frames: 0,
 
             kbd_state: KbdState::Main,
+            pause_cycle: 0,
             flipper_state: enum_map! { _ => false},
             flipper_pressed: false,
             flippers_enabled: false,
@@ -306,6 +308,7 @@ impl Table {
         self.dm.set_state(true);
         self.dm_puts(DmFont::H13, DmCoord { x: 36, y: 1 }, b"GAME PAUSED");
         self.kbd_state = KbdState::Paused;
+        self.pause_cycle = 0;
         self.player.pause();
     }
 
@@ -351,10 +354,21 @@ impl View for Table {
     }
 
     fn run_frame(&mut self) -> Action {
-        if matches!(
-            self.kbd_state,
-            KbdState::Paused | KbdState::PausedConfirmQuit
-        ) {
+        if self.kbd_state == KbdState::Paused {
+            self.pause_cycle += 1;
+            if self.pause_cycle == 120 {
+                self.dm.clear();
+                self.dm_puts(DmFont::H13, DmCoord { x: 32, y: 1 }, b"P TO UNPAUSE");
+            } else if self.pause_cycle == 240 {
+                self.dm.clear();
+                self.dm_puts(DmFont::H13, DmCoord { x: 16, y: 1 }, b"ARSM FOR OPTIONS");
+            } else if self.pause_cycle == 360 {
+                self.dm.clear();
+                self.dm_puts(DmFont::H13, DmCoord { x: 36, y: 1 }, b"GAME PAUSED");
+                self.pause_cycle = 0;
+            }
+            Action::None
+        } else if self.kbd_state == KbdState::PausedConfirmQuit {
             Action::None
         } else if self.quitting {
             self.fade -= 2;
@@ -559,14 +573,6 @@ impl View for Table {
 
         match self.kbd_state {
             KbdState::Main => {
-                match key {
-                    VirtualKeyCode::F9 | VirtualKeyCode::Key9 => self.scroll.set_speed(9),
-                    VirtualKeyCode::F10 | VirtualKeyCode::Key0 => self.scroll.set_speed(11),
-                    VirtualKeyCode::F11 | VirtualKeyCode::Minus => self.scroll.set_speed(20),
-                    VirtualKeyCode::F12 | VirtualKeyCode::Equals => self.scroll.set_speed(40),
-                    _ => (),
-                }
-
                 if self.start_keys_active && (self.in_attract || self.at_spring) {
                     match key {
                         VirtualKeyCode::F1 | VirtualKeyCode::Key1 => self.start_key = Some(1),
@@ -612,35 +618,86 @@ impl View for Table {
                     }
                 }
             }
-            KbdState::ConfirmQuit => {
-                if state != ElementState::Pressed {
-                    return;
+            KbdState::ConfirmQuit => match key {
+                VirtualKeyCode::Y => {
+                    self.quitting = true;
+                    self.kbd_state = KbdState::Main;
                 }
-                match key {
-                    VirtualKeyCode::Y => {
-                        self.quitting = true;
-                        self.kbd_state = KbdState::Main;
+                VirtualKeyCode::N => self.kbd_state = KbdState::Main,
+                _ => (),
+            },
+            KbdState::Paused => match key {
+                VirtualKeyCode::M => {
+                    self.toggle_music();
+                    self.dm.clear();
+                    if self.options.no_music {
+                        self.dm_puts(DmFont::H13, DmCoord { x: 44, y: 1 }, b"MUSIC OFF");
+                    } else {
+                        self.dm_puts(DmFont::H13, DmCoord { x: 48, y: 1 }, b"MUSIC ON");
                     }
-                    VirtualKeyCode::N => self.kbd_state = KbdState::Main,
-                    _ => (),
+                    self.pause_cycle = 0;
                 }
-            }
-            KbdState::Paused => {
-                if state != ElementState::Pressed {
-                    return;
+                VirtualKeyCode::R => {
+                    self.options.resolution = match self.options.resolution {
+                        Resolution::Normal => Resolution::High,
+                        Resolution::High => Resolution::Full,
+                        Resolution::Full => Resolution::Normal,
+                    };
+                    self.scroll.set_resolution(
+                        self.options.resolution,
+                        if self.in_attract {
+                            None
+                        } else {
+                            Some(self.ball.pos().1)
+                        },
+                    );
+                    self.dm.clear();
+                    self.dm_puts(DmFont::H13, DmCoord { x: 8, y: 1 }, b"RESOLUTION CHANGED");
+                    self.pause_cycle = 0;
                 }
-                if key == VirtualKeyCode::Escape {
+                VirtualKeyCode::S => {
+                    self.options.scroll_speed = match self.options.scroll_speed {
+                        ScrollSpeed::Hard => ScrollSpeed::Medium,
+                        ScrollSpeed::Medium => ScrollSpeed::Soft,
+                        ScrollSpeed::Soft => ScrollSpeed::Hard,
+                    };
+                    self.scroll
+                        .set_speed(self.options.scroll_speed.to_raw_speed());
+                    self.dm.clear();
+                    match self.options.scroll_speed {
+                        ScrollSpeed::Hard => {
+                            self.dm_puts(DmFont::H13, DmCoord { x: 24, y: 1 }, b"SCROLLING HARD")
+                        }
+                        ScrollSpeed::Medium => {
+                            self.dm_puts(DmFont::H13, DmCoord { x: 16, y: 1 }, b"SCROLLING MEDIUM")
+                        }
+                        ScrollSpeed::Soft => {
+                            self.dm_puts(DmFont::H13, DmCoord { x: 24, y: 1 }, b"SCROLLING SOFT")
+                        }
+                    }
+                    self.pause_cycle = 0;
+                }
+                VirtualKeyCode::A => {
+                    self.options.angle_high = !self.options.angle_high;
+                    self.dm.clear();
+                    if self.options.angle_high {
+                        self.dm_puts(DmFont::H13, DmCoord { x: 40, y: 1 }, b"ANGLE HIGH");
+                    } else {
+                        self.dm_puts(DmFont::H13, DmCoord { x: 44, y: 1 }, b"ANGLE LOW");
+                    }
+                    self.pause_cycle = 0;
+                }
+                VirtualKeyCode::P => {
+                    self.unpause();
+                }
+                VirtualKeyCode::Escape => {
                     self.dm.clear();
                     self.dm_puts(DmFont::H13, DmCoord { x: 0, y: 1 }, b"REALLY QUIT (Y OR N)");
                     self.kbd_state = KbdState::PausedConfirmQuit;
-                } else {
-                    self.unpause();
                 }
-            }
+                _ => (),
+            },
             KbdState::PausedConfirmQuit => {
-                if state != ElementState::Pressed {
-                    return;
-                }
                 if key == VirtualKeyCode::Y {
                     self.dm.restore();
                     self.quitting = true;
@@ -718,7 +775,7 @@ impl View for Table {
                     }
                 }
             }
-            if (by..by + 15).contains(&(sy as i16)) {
+            if !self.in_attract && (by..by + 15).contains(&(sy as i16)) {
                 let ball_y = sy as i16 - by;
                 for ball_x in 0..15 {
                     let pix = self.assets.ball.data[(ball_x as usize, ball_y as usize)];

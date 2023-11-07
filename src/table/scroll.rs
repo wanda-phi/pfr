@@ -1,4 +1,4 @@
-use crate::config::{Options, Resolution, ScrollSpeed};
+use crate::config::{Options, Resolution};
 
 pub struct ScrollState {
     pos: u16,
@@ -20,11 +20,7 @@ impl ScrollState {
         Self {
             pos: 576 - window_height,
             raw_pos_f4: 0,
-            speed: match options.scroll_speed {
-                ScrollSpeed::Hard => 20,
-                ScrollSpeed::Medium => 11,
-                ScrollSpeed::Soft => 9,
-            },
+            speed: options.scroll_speed.to_raw_speed(),
             window_height,
             target_special: None,
             ball_target: match options.resolution {
@@ -34,6 +30,36 @@ impl ScrollState {
             },
             attract_up: true,
         }
+    }
+
+    pub fn set_resolution(&mut self, resolution: Resolution, ball_y: Option<i16>) {
+        match resolution {
+            Resolution::Normal => {
+                self.window_height = 240 - 33;
+                self.ball_target = 75;
+            }
+            Resolution::High => {
+                self.window_height = 350 - 33;
+                self.ball_target = 130;
+            }
+            Resolution::Full => {
+                self.window_height = 576;
+                self.ball_target = 0;
+            }
+        }
+        self.pos = self
+            .target_special
+            .unwrap_or(if let Some(ball_y) = ball_y {
+                if ball_y < self.ball_target {
+                    0
+                } else {
+                    (ball_y - self.ball_target) as u16
+                }
+            } else {
+                0
+            })
+            .min(576 - self.window_height);
+        self.raw_pos_f4 = (self.pos as i16) << 4;
     }
 
     pub fn update(&mut self, ball_y: i16) {
