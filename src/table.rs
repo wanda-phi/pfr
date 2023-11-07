@@ -92,6 +92,7 @@ pub struct Table {
 
     kbd_state: KbdState,
     pause_cycle: u16,
+    option_changed: bool,
     flipper_state: EnumMap<FlipperSide, bool>,
     flipper_pressed: bool,
     flippers_enabled: bool,
@@ -253,6 +254,7 @@ impl Table {
 
             kbd_state: KbdState::Main,
             pause_cycle: 0,
+            option_changed: false,
             flipper_state: enum_map! { _ => false},
             flipper_pressed: false,
             flippers_enabled: false,
@@ -367,7 +369,12 @@ impl View for Table {
                 self.dm_puts(DmFont::H13, DmCoord { x: 36, y: 1 }, b"GAME PAUSED");
                 self.pause_cycle = 0;
             }
-            Action::None
+            if self.option_changed {
+                self.option_changed = false;
+                Action::SaveOptions(self.options)
+            } else {
+                Action::None
+            }
         } else if self.kbd_state == KbdState::PausedConfirmQuit {
             Action::None
         } else if self.quitting {
@@ -488,6 +495,9 @@ impl View for Table {
             if self.flush_high_scores {
                 self.flush_high_scores = false;
                 Action::SaveHighScores(self.assets.table, self.high_scores)
+            } else if self.option_changed {
+                self.option_changed = false;
+                Action::SaveOptions(self.options)
             } else {
                 Action::None
             }
@@ -608,7 +618,10 @@ impl View for Table {
                 } else if !self.in_drain {
                     match key {
                         VirtualKeyCode::Escape if self.at_spring => self.abort_game(),
-                        VirtualKeyCode::M => self.toggle_music(),
+                        VirtualKeyCode::M => {
+                            self.toggle_music();
+                            self.option_changed = true;
+                        }
                         VirtualKeyCode::P => self.pause(),
                         // VirtualKeyCode::W => self.ball.speed = (0, -1000),
                         // VirtualKeyCode::S => self.ball.speed = (0, 1000),
@@ -636,6 +649,7 @@ impl View for Table {
                         self.dm_puts(DmFont::H13, DmCoord { x: 48, y: 1 }, b"MUSIC ON");
                     }
                     self.pause_cycle = 0;
+                    self.option_changed = true;
                 }
                 VirtualKeyCode::R => {
                     self.options.resolution = match self.options.resolution {
@@ -654,6 +668,7 @@ impl View for Table {
                     self.dm.clear();
                     self.dm_puts(DmFont::H13, DmCoord { x: 8, y: 1 }, b"RESOLUTION CHANGED");
                     self.pause_cycle = 0;
+                    self.option_changed = true;
                 }
                 VirtualKeyCode::S => {
                     self.options.scroll_speed = match self.options.scroll_speed {
@@ -676,6 +691,7 @@ impl View for Table {
                         }
                     }
                     self.pause_cycle = 0;
+                    self.option_changed = true;
                 }
                 VirtualKeyCode::A => {
                     self.options.angle_high = !self.options.angle_high;
@@ -686,6 +702,7 @@ impl View for Table {
                         self.dm_puts(DmFont::H13, DmCoord { x: 44, y: 1 }, b"ANGLE LOW");
                     }
                     self.pause_cycle = 0;
+                    self.option_changed = true;
                 }
                 VirtualKeyCode::P => {
                     self.unpause();
