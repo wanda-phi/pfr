@@ -101,12 +101,7 @@ fn main() {
                         }
                     };
                     g.set_updates_per_second(view.get_fps());
-                    let dims = view.get_resolution();
-                    g.window.set_resizable(true);
-                    // g.window.set_inner_size(PhysicalSize::new(dims.0, dims.1));
-                    g.game.pixels.resize_buffer(dims.0, dims.1).unwrap();
-                    g.game.dims = dims;
-                    g.game.view = Some(view)
+                    g.game.view = Some(view);
                 }
                 Action::Exit => g.exit(),
                 Action::SaveOptions(options) => {
@@ -121,6 +116,15 @@ fn main() {
         },
         |g| {
             // render
+            if let Some(ref view) = g.game.view {
+                let dims = view.get_resolution();
+                if dims != g.game.dims {
+                    g.window.set_resizable(true);
+                    // g.window.set_inner_size(PhysicalSize::new(dims.0, dims.1));
+                    g.game.pixels.resize_buffer(dims.0, dims.1).unwrap();
+                    g.game.dims = dims;
+                }
+            }
             let frame = g.game.pixels.frame_mut();
             let width = g.game.dims.0 as usize;
             let height = g.game.dims.1 as usize;
