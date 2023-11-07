@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use pfr::{
-    config::{save_high_scores, Config, FileConfigStore, TableId},
+    config::{save_high_scores, Config, FileConfigStore, Resolution, TableId},
     intro::Intro,
     table::Table,
     view::{Action, Route, View},
@@ -35,10 +35,19 @@ fn main() {
     let cstore = FileConfigStore::new(&args.data);
     let config = Config::load(&cstore);
     let event_loop = EventLoop::new();
+    let dims = if config.options.resolution == Resolution::Full {
+        (640, (576 + 33) * 2)
+    } else {
+        (640, 480)
+    };
     let window = WindowBuilder::new()
         .with_title("Pinball Fantasies")
-        .with_min_inner_size(PhysicalSize::new(640, 480))
-        .with_inner_size(PhysicalSize::new(640 * 2, 480 * 2))
+        .with_min_inner_size(PhysicalSize::new(dims.0, dims.1))
+        .with_inner_size(if config.options.resolution == Resolution::Full {
+            PhysicalSize::new(640, (576 + 33) * 2)
+        } else {
+            PhysicalSize::new(640 * 2, 480 * 2)
+        })
         .with_resizable(false)
         .build(&event_loop)
         .unwrap();
@@ -46,14 +55,14 @@ fn main() {
     let pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(640, 480, surface_texture).unwrap()
+        Pixels::new(dims.0, dims.1, surface_texture).unwrap()
     };
     let game = Game {
         pixels,
         args,
         config,
         view: None,
-        dims: (640, 480),
+        dims,
     };
     game_loop(
         event_loop,
