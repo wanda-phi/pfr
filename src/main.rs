@@ -63,7 +63,7 @@ fn main() {
         0.2,
         move |g| {
             // update
-            let action = match g.game.view {
+            let mut action = match g.game.view {
                 Some(ref mut view) => view.run_frame(),
                 None => Action::Navigate(match g.game.args.table {
                     Some(t) => Route::Table(match t {
@@ -76,6 +76,9 @@ fn main() {
                     None => Route::Intro(None),
                 }),
             };
+            if g.game.args.table.is_some() && matches!(action, Action::Navigate(Route::Intro(_))) {
+                action = Action::Exit;
+            }
             match action {
                 Action::None => {}
                 Action::Navigate(route) => {
