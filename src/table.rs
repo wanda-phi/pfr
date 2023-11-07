@@ -363,7 +363,7 @@ impl View for Table {
                 self.dm_puts(DmFont::H13, DmCoord { x: 32, y: 1 }, b"P TO UNPAUSE");
             } else if self.pause_cycle == 240 {
                 self.dm.clear();
-                self.dm_puts(DmFont::H13, DmCoord { x: 16, y: 1 }, b"ARSM FOR OPTIONS");
+                self.dm_puts(DmFont::H13, DmCoord { x: 16, y: 1 }, b"ASMR FOR OPTIONS");
             } else if self.pause_cycle == 360 {
                 self.dm.clear();
                 self.dm_puts(DmFont::H13, DmCoord { x: 36, y: 1 }, b"GAME PAUSED");
