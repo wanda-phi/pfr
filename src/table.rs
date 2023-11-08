@@ -4,7 +4,7 @@ use arrayvec::ArrayVec;
 use enum_map::{enum_map, EnumMap};
 use ndarray::Array2;
 use unnamed_entity::EntityVec;
-use winit::event::ElementState;
+use winit::event::{ElementState, TouchPhase};
 use winit::keyboard::KeyCode;
 
 use crate::{
@@ -101,6 +101,10 @@ pub struct Table {
     space_pressed: bool,
     spring_down_state: bool,
     spring_released: bool,
+    touch_spring: Option<(u64, i16)>,
+    touch_flipper_left: Option<u64>,
+    touch_flipper_right: Option<u64>,
+    touch_space: Option<u64>,
     start_keys_active: bool,
     start_key: Option<u8>,
 
@@ -263,6 +267,10 @@ impl Table {
             space_pressed: false,
             spring_down_state: false,
             spring_released: false,
+            touch_spring: None,
+            touch_flipper_left: None,
+            touch_flipper_right: None,
+            touch_space: None,
             start_keys_active: true,
             start_key: None,
             quitting: false,
@@ -379,7 +387,9 @@ impl View for Table {
         } else if self.kbd_state == KbdState::PausedConfirmQuit {
             Action::None
         } else if self.quitting {
-            self.fade -= 2;
+            if self.fade != 0 {
+                self.fade -= 2;
+            }
             self.player.set_master_volume(self.fade.into());
             if self.fade == 0 {
                 Action::Navigate(Route::Intro(Some(self.assets.table)))
@@ -839,12 +849,89 @@ impl View for Table {
         }
     }
 
-    fn handle_touch(
-        &mut self,
-        _id: u64,
-        _phase: winit::event::TouchPhase,
-        _pos: Option<(u32, u32)>,
-    ) {
-        // TODO
+    fn handle_touch(&mut self, id: u64, phase: winit::event::TouchPhase, pos: (i32, i32)) {
+        if self.in_attract && self.start_keys_active && phase == TouchPhase::Started {
+            self.start_key = Some(1);
+        }
+        if matches!(phase, TouchPhase::Ended | TouchPhase::Cancelled) {
+            if self.touch_flipper_left == Some(id) {
+                self.flipper_state[FlipperSide::Left] = false;
+                self.touch_flipper_left = None;
+            }
+            if self.touch_flipper_right == Some(id) {
+                self.flipper_state[FlipperSide::Right] = false;
+                self.touch_flipper_right = None;
+            }
+            if self.touch_space == Some(id) {
+                self.space_state = false;
+                self.touch_space = None;
+            }
+        }
+        if !self.in_attract && !self.drained {
+            if self.at_spring {
+                let pos = pos.1 as i16;
+                let factor = match self.options.resolution {
+                    Resolution::Normal => 2,
+                    Resolution::High => 3,
+                    Resolution::Full => 5,
+                };
+                match phase {
+                    TouchPhase::Started => self.touch_spring = Some((id, pos)),
+                    TouchPhase::Moved => {
+                        if let Some((orig_id, orig_pos)) = self.touch_spring {
+                            if id == orig_id {
+                                if pos > orig_pos {
+                                    self.spring_pos = ((pos - orig_pos) / factor).min(32) as u8;
+                                } else {
+                                    self.touch_spring = Some((id, pos));
+                                }
+                            }
+                        }
+                    }
+                    TouchPhase::Ended => {
+                        if let Some((orig_id, orig_pos)) = self.touch_spring {
+                            if id == orig_id {
+                                if pos > orig_pos {
+                                    self.spring_pos = ((pos - orig_pos) / factor).min(32) as u8;
+                                    self.spring_released = true;
+                                } else {
+                                    self.touch_spring = Some((id, pos));
+                                }
+                                self.touch_spring = None;
+                            }
+                        }
+                    }
+                    TouchPhase::Cancelled => {
+                        if let Some((orig_id, _)) = self.touch_spring {
+                            if id == orig_id {
+                                self.touch_spring = None
+                            }
+                        }
+                    }
+                }
+            } else {
+                if pos.1 < (self.get_resolution().1 / 2) as i32 {
+                    return;
+                }
+                if phase != TouchPhase::Started {
+                    return;
+                }
+                if pos.0 < 110 {
+                    self.touch_flipper_left = Some(id);
+                    self.flipper_pressed = true;
+                    self.play_sfx_bind(SfxBind::FlipperPress);
+                    self.flipper_state[FlipperSide::Left] = true;
+                } else if pos.0 < 210 {
+                    self.touch_space = Some(id);
+                    self.space_pressed = true;
+                    self.space_state = true;
+                } else {
+                    self.touch_flipper_right = Some(id);
+                    self.flipper_pressed = true;
+                    self.play_sfx_bind(SfxBind::FlipperPress);
+                    self.flipper_state[FlipperSide::Right] = true;
+                };
+            }
+        }
     }
 }

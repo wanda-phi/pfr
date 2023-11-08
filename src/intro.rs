@@ -444,7 +444,7 @@ impl Intro {
         }
     }
 
-    fn handle_tap(&mut self, pos: (u32, u32)) {
+    fn handle_tap(&mut self, pos: (i32, i32)) {
         if matches!(self.state, State::Slide(_, _)) {
             self.key = KeyPress::Space;
             return;
@@ -1005,7 +1005,7 @@ impl View for Intro {
         }
     }
 
-    fn handle_touch(&mut self, id: u64, phase: TouchPhase, pos: Option<(u32, u32)>) {
+    fn handle_touch(&mut self, id: u64, phase: TouchPhase, pos: (i32, i32)) {
         match phase {
             TouchPhase::Started => {
                 self.touch_static.insert(id);
@@ -1013,7 +1013,11 @@ impl View for Intro {
             TouchPhase::Ended => {
                 if self.touch_static.contains(&id) {
                     self.touch_static.remove(&id);
-                    if let Some(pos) = pos {
+                    if pos.0 >= 0
+                        && pos.1 >= 0
+                        && pos.0 < 640
+                        && pos.1 < (if self.is_vertical() { 960 } else { 480 })
+                    {
                         self.handle_tap(pos);
                     }
                 }

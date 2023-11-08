@@ -214,7 +214,10 @@ fn main() {
                             touch.location.x as f32,
                             touch.location.y as f32,
                         ));
-                        let pos = pos.ok().map(|(x, y)| (x as u32, y as u32));
+                        let pos = match pos {
+                            Ok((x, y)) => (x as i32, y as i32),
+                            Err((x, y)) => (x as i32, y as i32),
+                        };
                         view.handle_touch(touch.id, touch.phase, pos);
                     }
                 }
@@ -222,5 +225,6 @@ fn main() {
                 _ => {}
             }
         },
-    ).unwrap();
+    )
+    .unwrap();
 }
