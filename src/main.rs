@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use pfr::{
     config::{save_high_scores, Config, FileConfigStore, Resolution, TableId},
+    icons::IconKind,
     intro::Intro,
     table::Table,
     view::{Action, Route, View},
@@ -11,10 +12,10 @@ use pfr::{
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::PhysicalSize,
-    event::{Event, KeyEvent, MouseButton, TouchPhase, WindowEvent},
+    event::{ElementState, Event, KeyEvent, MouseButton, TouchPhase, WindowEvent},
     event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
-    window::WindowBuilder,
+    window::{Fullscreen, WindowBuilder},
 };
 
 struct Game {
@@ -239,6 +240,13 @@ fn main() {
                 } => {
                     if let Some(ref mut view) = g.game.view {
                         if let PhysicalKey::Code(key) = *key {
+                            if key == KeyCode::F11 && *state == ElementState::Pressed {
+                                if g.window.fullscreen().is_some() {
+                                    g.window.set_fullscreen(None);
+                                } else {
+                                    g.window.set_fullscreen(Some(Fullscreen::Borderless(None)))
+                                }
+                            }
                             view.handle_key(key, *state);
                         }
                     }
@@ -281,6 +289,15 @@ fn main() {
                                 let idx = (pos.0 / unit) as usize;
                                 for (iidx, icon) in view.get_touch_icons() {
                                     if idx == iidx {
+                                        if icon == IconKind::Fullscreen {
+                                            if g.window.fullscreen().is_some() {
+                                                g.window.set_fullscreen(None);
+                                            } else {
+                                                g.window.set_fullscreen(Some(
+                                                    Fullscreen::Borderless(None),
+                                                ))
+                                            }
+                                        }
                                         view.handle_touch_icon(icon);
                                     }
                                 }

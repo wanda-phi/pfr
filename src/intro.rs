@@ -1016,18 +1016,18 @@ impl View for Intro {
     fn handle_touch(&mut self, id: u64, phase: TouchPhase, pos: (i32, i32)) {
         match phase {
             TouchPhase::Started => {
-                self.touch_static.insert(id);
+                self.touch_static.remove(&id);
+                if pos.0 >= 0
+                    && pos.1 >= 0
+                    && pos.0 < 640
+                    && pos.1 < (if self.is_vertical() { 960 } else { 480 })
+                {
+                    self.touch_static.insert(id);
+                }
             }
             TouchPhase::Ended => {
                 if self.touch_static.contains(&id) {
-                    self.touch_static.remove(&id);
-                    if pos.0 >= 0
-                        && pos.1 >= 0
-                        && pos.0 < 640
-                        && pos.1 < (if self.is_vertical() { 960 } else { 480 })
-                    {
-                        self.handle_tap(pos);
-                    }
+                    self.handle_tap(pos);
                 }
             }
             TouchPhase::Moved | TouchPhase::Cancelled => {
