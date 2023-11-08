@@ -4,7 +4,8 @@ use arrayvec::ArrayVec;
 use enum_map::{enum_map, EnumMap};
 use ndarray::Array2;
 use unnamed_entity::EntityVec;
-use winit::event::{ElementState, VirtualKeyCode};
+use winit::event::ElementState;
+use winit::keyboard::KeyCode;
 
 use crate::{
     assets::table::{
@@ -504,10 +505,10 @@ impl View for Table {
         }
     }
 
-    fn handle_key(&mut self, key: VirtualKeyCode, state: ElementState) {
+    fn handle_key(&mut self, key: KeyCode, state: ElementState) {
         if matches!(
             key,
-            VirtualKeyCode::LShift | VirtualKeyCode::LControl | VirtualKeyCode::LAlt
+            KeyCode::ShiftLeft | KeyCode::ControlLeft | KeyCode::AltLeft
         ) {
             if state == ElementState::Pressed
                 && self.flippers_enabled
@@ -520,7 +521,7 @@ impl View for Table {
         }
         if matches!(
             key,
-            VirtualKeyCode::RShift | VirtualKeyCode::RControl | VirtualKeyCode::RAlt
+            KeyCode::ShiftRight | KeyCode::ControlRight | KeyCode::AltRight
         ) {
             if state == ElementState::Pressed
                 && self.flippers_enabled
@@ -532,14 +533,14 @@ impl View for Table {
             self.flipper_state[FlipperSide::Right] = state == ElementState::Pressed;
         }
 
-        if key == VirtualKeyCode::Space {
+        if key == KeyCode::Space {
             if state == ElementState::Pressed && !self.space_state {
                 self.space_pressed = true;
             }
             self.space_state = state == ElementState::Pressed;
         }
 
-        if key == VirtualKeyCode::Down {
+        if key == KeyCode::ArrowDown {
             self.spring_down_state = state == ElementState::Pressed;
             if state == ElementState::Released {
                 self.spring_released = true;
@@ -551,33 +552,33 @@ impl View for Table {
         }
 
         let chr = match key {
-            VirtualKeyCode::A => Some(b'A'),
-            VirtualKeyCode::B => Some(b'B'),
-            VirtualKeyCode::C => Some(b'C'),
-            VirtualKeyCode::D => Some(b'D'),
-            VirtualKeyCode::E => Some(b'E'),
-            VirtualKeyCode::F => Some(b'F'),
-            VirtualKeyCode::G => Some(b'G'),
-            VirtualKeyCode::H => Some(b'H'),
-            VirtualKeyCode::I => Some(b'I'),
-            VirtualKeyCode::J => Some(b'J'),
-            VirtualKeyCode::K => Some(b'K'),
-            VirtualKeyCode::L => Some(b'L'),
-            VirtualKeyCode::M => Some(b'M'),
-            VirtualKeyCode::N => Some(b'N'),
-            VirtualKeyCode::O => Some(b'O'),
-            VirtualKeyCode::P => Some(b'P'),
-            VirtualKeyCode::Q => Some(b'Q'),
-            VirtualKeyCode::R => Some(b'R'),
-            VirtualKeyCode::S => Some(b'S'),
-            VirtualKeyCode::T => Some(b'T'),
-            VirtualKeyCode::U => Some(b'U'),
-            VirtualKeyCode::V => Some(b'V'),
-            VirtualKeyCode::W => Some(b'W'),
-            VirtualKeyCode::X => Some(b'X'),
-            VirtualKeyCode::Y => Some(b'Y'),
-            VirtualKeyCode::Z => Some(b'Z'),
-            VirtualKeyCode::Space => Some(b' '),
+            KeyCode::KeyA => Some(b'A'),
+            KeyCode::KeyB => Some(b'B'),
+            KeyCode::KeyC => Some(b'C'),
+            KeyCode::KeyD => Some(b'D'),
+            KeyCode::KeyE => Some(b'E'),
+            KeyCode::KeyF => Some(b'F'),
+            KeyCode::KeyG => Some(b'G'),
+            KeyCode::KeyH => Some(b'H'),
+            KeyCode::KeyI => Some(b'I'),
+            KeyCode::KeyJ => Some(b'J'),
+            KeyCode::KeyK => Some(b'K'),
+            KeyCode::KeyL => Some(b'L'),
+            KeyCode::KeyM => Some(b'M'),
+            KeyCode::KeyN => Some(b'N'),
+            KeyCode::KeyO => Some(b'O'),
+            KeyCode::KeyP => Some(b'P'),
+            KeyCode::KeyQ => Some(b'Q'),
+            KeyCode::KeyR => Some(b'R'),
+            KeyCode::KeyS => Some(b'S'),
+            KeyCode::KeyT => Some(b'T'),
+            KeyCode::KeyU => Some(b'U'),
+            KeyCode::KeyV => Some(b'V'),
+            KeyCode::KeyW => Some(b'W'),
+            KeyCode::KeyX => Some(b'X'),
+            KeyCode::KeyY => Some(b'Y'),
+            KeyCode::KeyZ => Some(b'Z'),
+            KeyCode::Space => Some(b' '),
             _ => None,
         };
 
@@ -585,15 +586,15 @@ impl View for Table {
             KbdState::Main => {
                 if self.start_keys_active && (self.in_attract || self.at_spring) {
                     match key {
-                        VirtualKeyCode::F1 | VirtualKeyCode::Key1 => self.start_key = Some(1),
-                        VirtualKeyCode::F2 | VirtualKeyCode::Key2 => self.start_key = Some(2),
-                        VirtualKeyCode::F3 | VirtualKeyCode::Key3 => self.start_key = Some(3),
-                        VirtualKeyCode::F4 | VirtualKeyCode::Key4 => self.start_key = Some(4),
-                        VirtualKeyCode::F5 | VirtualKeyCode::Key5 => self.start_key = Some(5),
-                        VirtualKeyCode::F6 | VirtualKeyCode::Key6 => self.start_key = Some(6),
-                        VirtualKeyCode::F7 | VirtualKeyCode::Key7 => self.start_key = Some(7),
-                        VirtualKeyCode::F8 | VirtualKeyCode::Key8 => self.start_key = Some(8),
-                        VirtualKeyCode::Return => {
+                        KeyCode::F1 | KeyCode::Digit1 => self.start_key = Some(1),
+                        KeyCode::F2 | KeyCode::Digit2 => self.start_key = Some(2),
+                        KeyCode::F3 | KeyCode::Digit3 => self.start_key = Some(3),
+                        KeyCode::F4 | KeyCode::Digit4 => self.start_key = Some(4),
+                        KeyCode::F5 | KeyCode::Digit5 => self.start_key = Some(5),
+                        KeyCode::F6 | KeyCode::Digit6 => self.start_key = Some(6),
+                        KeyCode::F7 | KeyCode::Digit7 => self.start_key = Some(7),
+                        KeyCode::F8 | KeyCode::Digit8 => self.start_key = Some(8),
+                        KeyCode::Enter => {
                             if self.in_attract {
                                 self.start_key = Some(1);
                             } else if self.total_players < 8 {
@@ -611,36 +612,36 @@ impl View for Table {
                     if let Some(chr) = chr {
                         self.handle_cheat(chr);
                     }
-                    if key == VirtualKeyCode::Escape {
+                    if key == KeyCode::Escape {
                         self.kbd_state = KbdState::ConfirmQuit;
                         self.start_script(ScriptBind::ConfirmQuit);
                     }
                 } else if !self.in_drain {
                     match key {
-                        VirtualKeyCode::Escape if self.at_spring => self.abort_game(),
-                        VirtualKeyCode::M => {
+                        KeyCode::Escape if self.at_spring => self.abort_game(),
+                        KeyCode::KeyM => {
                             self.toggle_music();
                             self.option_changed = true;
                         }
-                        VirtualKeyCode::P => self.pause(),
-                        // VirtualKeyCode::W => self.ball.speed = (0, -1000),
-                        // VirtualKeyCode::S => self.ball.speed = (0, 1000),
-                        // VirtualKeyCode::A => self.ball.speed = (-1000, 0),
-                        // VirtualKeyCode::D => self.ball.speed = (1000, 0),
+                        KeyCode::KeyP => self.pause(),
+                        // KeyCode::W => self.ball.speed = (0, -1000),
+                        // KeyCode::S => self.ball.speed = (0, 1000),
+                        // KeyCode::A => self.ball.speed = (-1000, 0),
+                        // KeyCode::D => self.ball.speed = (1000, 0),
                         _ => (),
                     }
                 }
             }
             KbdState::ConfirmQuit => match key {
-                VirtualKeyCode::Y => {
+                KeyCode::KeyY => {
                     self.quitting = true;
                     self.kbd_state = KbdState::Main;
                 }
-                VirtualKeyCode::N => self.kbd_state = KbdState::Main,
+                KeyCode::KeyN => self.kbd_state = KbdState::Main,
                 _ => (),
             },
             KbdState::Paused => match key {
-                VirtualKeyCode::M => {
+                KeyCode::KeyM => {
                     self.toggle_music();
                     self.dm.clear();
                     if self.options.no_music {
@@ -651,7 +652,7 @@ impl View for Table {
                     self.pause_cycle = 0;
                     self.option_changed = true;
                 }
-                VirtualKeyCode::R => {
+                KeyCode::KeyR => {
                     self.options.resolution = match self.options.resolution {
                         Resolution::Normal => Resolution::High,
                         Resolution::High => Resolution::Full,
@@ -670,7 +671,7 @@ impl View for Table {
                     self.pause_cycle = 0;
                     self.option_changed = true;
                 }
-                VirtualKeyCode::S => {
+                KeyCode::KeyS => {
                     self.options.scroll_speed = match self.options.scroll_speed {
                         ScrollSpeed::Hard => ScrollSpeed::Medium,
                         ScrollSpeed::Medium => ScrollSpeed::Soft,
@@ -693,7 +694,7 @@ impl View for Table {
                     self.pause_cycle = 0;
                     self.option_changed = true;
                 }
-                VirtualKeyCode::A => {
+                KeyCode::KeyA => {
                     self.options.angle_high = !self.options.angle_high;
                     self.dm.clear();
                     if self.options.angle_high {
@@ -704,10 +705,10 @@ impl View for Table {
                     self.pause_cycle = 0;
                     self.option_changed = true;
                 }
-                VirtualKeyCode::P => {
+                KeyCode::KeyP => {
                     self.unpause();
                 }
-                VirtualKeyCode::Escape => {
+                KeyCode::Escape => {
                     self.dm.clear();
                     self.dm_puts(DmFont::H13, DmCoord { x: 0, y: 1 }, b"REALLY QUIT (Y OR N)");
                     self.kbd_state = KbdState::PausedConfirmQuit;
@@ -715,7 +716,7 @@ impl View for Table {
                 _ => (),
             },
             KbdState::PausedConfirmQuit => {
-                if key == VirtualKeyCode::Y {
+                if key == KeyCode::KeyY {
                     self.dm.restore();
                     self.quitting = true;
                     self.kbd_state = KbdState::Main;

@@ -3,7 +3,8 @@
 use std::collections::HashSet;
 
 use unnamed_entity::EntityId;
-use winit::event::{ElementState, TouchPhase, VirtualKeyCode};
+use winit::event::{ElementState, TouchPhase};
+use winit::keyboard::KeyCode;
 
 use crate::{
     assets::{
@@ -847,29 +848,21 @@ impl View for Intro {
         Action::None
     }
 
-    fn handle_key(&mut self, key: VirtualKeyCode, state: ElementState) {
+    fn handle_key(&mut self, key: KeyCode, state: ElementState) {
         if state != ElementState::Pressed {
             return;
         }
         match key {
-            VirtualKeyCode::F1 | VirtualKeyCode::Key1 => {
-                self.key = KeyPress::Table(TableId::Table1)
-            }
-            VirtualKeyCode::F2 | VirtualKeyCode::Key2 => {
-                self.key = KeyPress::Table(TableId::Table2)
-            }
-            VirtualKeyCode::F3 | VirtualKeyCode::Key3 => {
-                self.key = KeyPress::Table(TableId::Table3)
-            }
-            VirtualKeyCode::F4 | VirtualKeyCode::Key4 => {
-                self.key = KeyPress::Table(TableId::Table4)
-            }
-            VirtualKeyCode::F5 | VirtualKeyCode::Key5 => self.key = KeyPress::Options,
-            VirtualKeyCode::Escape => self.key = KeyPress::Escape,
-            VirtualKeyCode::Return => self.key = KeyPress::Enter,
-            VirtualKeyCode::Space => self.key = KeyPress::Space,
-            VirtualKeyCode::Down => self.key = KeyPress::Down,
-            VirtualKeyCode::Up => self.key = KeyPress::Up,
+            KeyCode::F1 | KeyCode::Digit1 => self.key = KeyPress::Table(TableId::Table1),
+            KeyCode::F2 | KeyCode::Digit2 => self.key = KeyPress::Table(TableId::Table2),
+            KeyCode::F3 | KeyCode::Digit3 => self.key = KeyPress::Table(TableId::Table3),
+            KeyCode::F4 | KeyCode::Digit4 => self.key = KeyPress::Table(TableId::Table4),
+            KeyCode::F5 | KeyCode::Digit5 => self.key = KeyPress::Options,
+            KeyCode::Escape => self.key = KeyPress::Escape,
+            KeyCode::Enter => self.key = KeyPress::Enter,
+            KeyCode::Space => self.key = KeyPress::Space,
+            KeyCode::ArrowDown => self.key = KeyPress::Down,
+            KeyCode::ArrowUp => self.key = KeyPress::Up,
             _ => (),
         }
     }
