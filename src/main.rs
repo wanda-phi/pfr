@@ -11,8 +11,9 @@ use pfr::{
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::PhysicalSize,
-    event::{Event, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent},
+    event::{Event, KeyEvent, MouseButton, WindowEvent},
     event_loop::EventLoop,
+    keyboard::{KeyCode, PhysicalKey},
     window::WindowBuilder,
 };
 
@@ -34,7 +35,7 @@ fn main() {
     let args = Args::parse();
     let cstore = FileConfigStore::new(&args.data);
     let config = Config::load(&cstore);
-    let event_loop = EventLoop::new();
+    let event_loop = EventLoop::new().unwrap();
     let dims = if config.options.resolution == Resolution::Full {
         (640, (576 + 33) * 2)
     } else {
@@ -66,7 +67,7 @@ fn main() {
     };
     game_loop(
         event_loop,
-        window,
+        window.into(),
         game,
         60,
         0.2,
@@ -175,9 +176,9 @@ fn main() {
                 Event::WindowEvent {
                     event:
                         WindowEvent::KeyboardInput {
-                            input:
-                                KeyboardInput {
-                                    virtual_keycode: Some(key),
+                            event:
+                                KeyEvent {
+                                    physical_key: key,
                                     state,
                                     ..
                                 },
@@ -186,7 +187,9 @@ fn main() {
                     ..
                 } => {
                     if let Some(ref mut view) = g.game.view {
-                        view.handle_key(*key, *state);
+                        if let PhysicalKey::Code(key) = *key {
+                            view.handle_key(key, *state);
+                        }
                     }
                 }
                 Event::WindowEvent {
@@ -195,10 +198,10 @@ fn main() {
                 } => {
                     if let Some(ref mut view) = g.game.view {
                         if &MouseButton::Left == button {
-                            view.handle_key(VirtualKeyCode::LShift, *state);
+                            view.handle_key(KeyCode::ShiftLeft, *state);
                         }
                         if &MouseButton::Right == button {
-                            view.handle_key(VirtualKeyCode::RShift, *state);
+                            view.handle_key(KeyCode::ShiftRight, *state);
                         }
                     }
                 }
@@ -219,5 +222,5 @@ fn main() {
                 _ => {}
             }
         },
-    );
+    ).unwrap();
 }
