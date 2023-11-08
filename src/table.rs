@@ -7,6 +7,7 @@ use unnamed_entity::EntityVec;
 use winit::event::{ElementState, TouchPhase};
 use winit::keyboard::KeyCode;
 
+use crate::icons::IconKind;
 use crate::{
     assets::table::{
         dm::DmFont,
@@ -346,6 +347,80 @@ impl Table {
         }
         self.sequencer.set_no_music(self.options.no_music);
     }
+
+    pub fn pause_option_angle(&mut self) {
+        self.options.angle_high = !self.options.angle_high;
+        self.dm.clear();
+        if self.options.angle_high {
+            self.dm_puts(DmFont::H13, DmCoord { x: 40, y: 1 }, b"ANGLE HIGH");
+        } else {
+            self.dm_puts(DmFont::H13, DmCoord { x: 44, y: 1 }, b"ANGLE LOW");
+        }
+        self.pause_cycle = 0;
+        self.option_changed = true;
+    }
+
+    pub fn pause_option_scrolling(&mut self) {
+        self.options.scroll_speed = match self.options.scroll_speed {
+            ScrollSpeed::Hard => ScrollSpeed::Medium,
+            ScrollSpeed::Medium => ScrollSpeed::Soft,
+            ScrollSpeed::Soft => ScrollSpeed::Hard,
+        };
+        self.scroll
+            .set_speed(self.options.scroll_speed.to_raw_speed());
+        self.dm.clear();
+        match self.options.scroll_speed {
+            ScrollSpeed::Hard => {
+                self.dm_puts(DmFont::H13, DmCoord { x: 24, y: 1 }, b"SCROLLING HARD")
+            }
+            ScrollSpeed::Medium => {
+                self.dm_puts(DmFont::H13, DmCoord { x: 16, y: 1 }, b"SCROLLING MEDIUM")
+            }
+            ScrollSpeed::Soft => {
+                self.dm_puts(DmFont::H13, DmCoord { x: 24, y: 1 }, b"SCROLLING SOFT")
+            }
+        }
+        self.pause_cycle = 0;
+        self.option_changed = true;
+    }
+
+    pub fn pause_option_music(&mut self) {
+        self.toggle_music();
+        self.dm.clear();
+        if self.options.no_music {
+            self.dm_puts(DmFont::H13, DmCoord { x: 44, y: 1 }, b"MUSIC OFF");
+        } else {
+            self.dm_puts(DmFont::H13, DmCoord { x: 48, y: 1 }, b"MUSIC ON");
+        }
+        self.pause_cycle = 0;
+        self.option_changed = true;
+    }
+
+    pub fn pause_option_resolution(&mut self) {
+        self.options.resolution = match self.options.resolution {
+            Resolution::Normal => Resolution::High,
+            Resolution::High => Resolution::Full,
+            Resolution::Full => Resolution::Normal,
+        };
+        self.scroll.set_resolution(
+            self.options.resolution,
+            if self.in_attract {
+                None
+            } else {
+                Some(self.ball.pos().1)
+            },
+        );
+        self.dm.clear();
+        self.dm_puts(DmFont::H13, DmCoord { x: 8, y: 1 }, b"RESOLUTION CHANGED");
+        self.pause_cycle = 0;
+        self.option_changed = true;
+    }
+
+    pub fn pause_confirm_quit(&mut self) {
+        self.dm.clear();
+        self.dm_puts(DmFont::H13, DmCoord { x: 0, y: 1 }, b"REALLY QUIT (Y OR N)");
+        self.kbd_state = KbdState::PausedConfirmQuit;
+    }
 }
 
 impl View for Table {
@@ -362,6 +437,58 @@ impl View for Table {
 
     fn get_fps(&self) -> u32 {
         60
+    }
+
+    fn get_touch_icons(&self) -> ArrayVec<(usize, IconKind), 8> {
+        match self.kbd_state {
+            KbdState::Main => {
+                if self.in_attract {
+                    [
+                        (0, IconKind::Play),
+                        (1, IconKind::Back),
+                        (6, IconKind::Fullscreen),
+                        (7, IconKind::Keyboard),
+                    ]
+                    .into_iter()
+                    .collect()
+                } else if self.start_keys_active {
+                    [
+                        (0, IconKind::PlayerPlus),
+                        (1, IconKind::PlayerMinus),
+                        (2, IconKind::Stop),
+                        (6, IconKind::Fullscreen),
+                        (7, IconKind::Pause),
+                    ]
+                    .into_iter()
+                    .collect()
+                } else {
+                    [(6, IconKind::Fullscreen), (7, IconKind::Pause)]
+                        .into_iter()
+                        .collect()
+                }
+            }
+            KbdState::ConfirmQuit | KbdState::PausedConfirmQuit => [
+                (0, IconKind::Yes),
+                (1, IconKind::No),
+                (6, IconKind::Fullscreen),
+            ]
+            .into_iter()
+            .collect(),
+            KbdState::Paused => [
+                (0, IconKind::OptionAngle),
+                (1, IconKind::OptionScroll),
+                (2, IconKind::OptionMusic),
+                (3, IconKind::OptionResolution),
+                (4, IconKind::Stop),
+                (6, IconKind::Fullscreen),
+                (7, IconKind::Play),
+            ]
+            .into_iter()
+            .collect(),
+            KbdState::GetName => [(6, IconKind::Fullscreen), (7, IconKind::Pause)]
+                .into_iter()
+                .collect(),
+        }
     }
 
     fn run_frame(&mut self) -> Action {
@@ -651,78 +778,12 @@ impl View for Table {
                 _ => (),
             },
             KbdState::Paused => match key {
-                KeyCode::KeyM => {
-                    self.toggle_music();
-                    self.dm.clear();
-                    if self.options.no_music {
-                        self.dm_puts(DmFont::H13, DmCoord { x: 44, y: 1 }, b"MUSIC OFF");
-                    } else {
-                        self.dm_puts(DmFont::H13, DmCoord { x: 48, y: 1 }, b"MUSIC ON");
-                    }
-                    self.pause_cycle = 0;
-                    self.option_changed = true;
-                }
-                KeyCode::KeyR => {
-                    self.options.resolution = match self.options.resolution {
-                        Resolution::Normal => Resolution::High,
-                        Resolution::High => Resolution::Full,
-                        Resolution::Full => Resolution::Normal,
-                    };
-                    self.scroll.set_resolution(
-                        self.options.resolution,
-                        if self.in_attract {
-                            None
-                        } else {
-                            Some(self.ball.pos().1)
-                        },
-                    );
-                    self.dm.clear();
-                    self.dm_puts(DmFont::H13, DmCoord { x: 8, y: 1 }, b"RESOLUTION CHANGED");
-                    self.pause_cycle = 0;
-                    self.option_changed = true;
-                }
-                KeyCode::KeyS => {
-                    self.options.scroll_speed = match self.options.scroll_speed {
-                        ScrollSpeed::Hard => ScrollSpeed::Medium,
-                        ScrollSpeed::Medium => ScrollSpeed::Soft,
-                        ScrollSpeed::Soft => ScrollSpeed::Hard,
-                    };
-                    self.scroll
-                        .set_speed(self.options.scroll_speed.to_raw_speed());
-                    self.dm.clear();
-                    match self.options.scroll_speed {
-                        ScrollSpeed::Hard => {
-                            self.dm_puts(DmFont::H13, DmCoord { x: 24, y: 1 }, b"SCROLLING HARD")
-                        }
-                        ScrollSpeed::Medium => {
-                            self.dm_puts(DmFont::H13, DmCoord { x: 16, y: 1 }, b"SCROLLING MEDIUM")
-                        }
-                        ScrollSpeed::Soft => {
-                            self.dm_puts(DmFont::H13, DmCoord { x: 24, y: 1 }, b"SCROLLING SOFT")
-                        }
-                    }
-                    self.pause_cycle = 0;
-                    self.option_changed = true;
-                }
-                KeyCode::KeyA => {
-                    self.options.angle_high = !self.options.angle_high;
-                    self.dm.clear();
-                    if self.options.angle_high {
-                        self.dm_puts(DmFont::H13, DmCoord { x: 40, y: 1 }, b"ANGLE HIGH");
-                    } else {
-                        self.dm_puts(DmFont::H13, DmCoord { x: 44, y: 1 }, b"ANGLE LOW");
-                    }
-                    self.pause_cycle = 0;
-                    self.option_changed = true;
-                }
-                KeyCode::KeyP => {
-                    self.unpause();
-                }
-                KeyCode::Escape => {
-                    self.dm.clear();
-                    self.dm_puts(DmFont::H13, DmCoord { x: 0, y: 1 }, b"REALLY QUIT (Y OR N)");
-                    self.kbd_state = KbdState::PausedConfirmQuit;
-                }
+                KeyCode::KeyM => self.pause_option_music(),
+                KeyCode::KeyR => self.pause_option_resolution(),
+                KeyCode::KeyS => self.pause_option_scrolling(),
+                KeyCode::KeyA => self.pause_option_angle(),
+                KeyCode::KeyP => self.unpause(),
+                KeyCode::Escape => self.pause_confirm_quit(),
                 _ => (),
             },
             KbdState::PausedConfirmQuit => {
@@ -850,7 +911,7 @@ impl View for Table {
     }
 
     fn handle_touch(&mut self, id: u64, phase: winit::event::TouchPhase, pos: (i32, i32)) {
-        if self.in_attract && self.start_keys_active && phase == TouchPhase::Started {
+        if self.in_attract && self.start_keys_active && phase == TouchPhase::Started && pos.1 >= 0 {
             self.start_key = Some(1);
         }
         if matches!(phase, TouchPhase::Ended | TouchPhase::Cancelled) {
@@ -867,71 +928,129 @@ impl View for Table {
                 self.touch_space = None;
             }
         }
-        if !self.in_attract && !self.drained {
-            if self.at_spring {
-                let pos = pos.1 as i16;
-                let factor = match self.options.resolution {
-                    Resolution::Normal => 2,
-                    Resolution::High => 3,
-                    Resolution::Full => 5,
-                };
-                match phase {
-                    TouchPhase::Started => self.touch_spring = Some((id, pos)),
-                    TouchPhase::Moved => {
-                        if let Some((orig_id, orig_pos)) = self.touch_spring {
-                            if id == orig_id {
-                                if pos > orig_pos {
-                                    self.spring_pos = ((pos - orig_pos) / factor).min(32) as u8;
-                                } else {
-                                    self.touch_spring = Some((id, pos));
-                                }
-                            }
-                        }
-                    }
-                    TouchPhase::Ended => {
-                        if let Some((orig_id, orig_pos)) = self.touch_spring {
-                            if id == orig_id {
-                                if pos > orig_pos {
-                                    self.spring_pos = ((pos - orig_pos) / factor).min(32) as u8;
-                                    self.spring_released = true;
-                                } else {
-                                    self.touch_spring = Some((id, pos));
-                                }
-                                self.touch_spring = None;
-                            }
-                        }
-                    }
-                    TouchPhase::Cancelled => {
-                        if let Some((orig_id, _)) = self.touch_spring {
-                            if id == orig_id {
-                                self.touch_spring = None
-                            }
-                        }
-                    }
-                }
-            } else {
+        let ypos = pos.1 as i16;
+        let factor = match self.options.resolution {
+            Resolution::Normal => 2,
+            Resolution::High => 3,
+            Resolution::Full => 5,
+        };
+        match phase {
+            TouchPhase::Started => {
                 if pos.1 < (self.get_resolution().1 / 2) as i32 {
-                    return;
+                    self.touch_spring = Some((id, ypos))
                 }
-                if phase != TouchPhase::Started {
-                    return;
-                }
-                if pos.0 < 110 {
-                    self.touch_flipper_left = Some(id);
-                    self.flipper_pressed = true;
-                    self.play_sfx_bind(SfxBind::FlipperPress);
-                    self.flipper_state[FlipperSide::Left] = true;
-                } else if pos.0 < 210 {
-                    self.touch_space = Some(id);
-                    self.space_pressed = true;
-                    self.space_state = true;
-                } else {
-                    self.touch_flipper_right = Some(id);
-                    self.flipper_pressed = true;
-                    self.play_sfx_bind(SfxBind::FlipperPress);
-                    self.flipper_state[FlipperSide::Right] = true;
-                };
             }
+            TouchPhase::Moved => {
+                if let Some((orig_id, orig_pos)) = self.touch_spring {
+                    if id == orig_id {
+                        if ypos > orig_pos {
+                            self.spring_pos = ((ypos - orig_pos) / factor).min(32) as u8;
+                        } else {
+                            self.touch_spring = Some((id, ypos));
+                        }
+                    }
+                }
+            }
+            TouchPhase::Ended => {
+                if let Some((orig_id, orig_pos)) = self.touch_spring {
+                    if id == orig_id {
+                        if ypos > orig_pos {
+                            self.spring_pos = ((ypos - orig_pos) / factor).min(32) as u8;
+                            self.spring_released = true;
+                        } else {
+                            self.touch_spring = Some((id, ypos));
+                        }
+                        self.touch_spring = None;
+                    }
+                }
+            }
+            TouchPhase::Cancelled => {
+                if let Some((orig_id, _)) = self.touch_spring {
+                    if id == orig_id {
+                        self.touch_spring = None
+                    }
+                }
+            }
+        }
+        if pos.1 >= (self.get_resolution().1 / 2) as i32 && phase == TouchPhase::Started {
+            if pos.0 < 110 {
+                self.touch_flipper_left = Some(id);
+                if self.flippers_enabled && !self.flipper_state[FlipperSide::Left] {
+                    self.flipper_pressed = true;
+                    self.play_sfx_bind(SfxBind::FlipperPress);
+                }
+                self.flipper_state[FlipperSide::Left] = true;
+            } else if pos.0 < 210 {
+                self.touch_space = Some(id);
+                self.space_pressed = true;
+                self.space_state = true;
+            } else {
+                self.touch_flipper_right = Some(id);
+                if self.flippers_enabled && !self.flipper_state[FlipperSide::Right] {
+                    self.flipper_pressed = true;
+                    self.play_sfx_bind(SfxBind::FlipperPress);
+                }
+                self.flipper_state[FlipperSide::Right] = true;
+            }
+        }
+    }
+
+    fn handle_touch_icon(&mut self, icon: IconKind) {
+        match icon {
+            IconKind::Play if self.kbd_state == KbdState::Paused => self.unpause(),
+            IconKind::Play if self.in_attract => self.start_key = Some(1),
+            IconKind::Pause
+                if self.kbd_state == KbdState::Main && !self.in_attract && !self.in_drain =>
+            {
+                self.pause()
+            }
+            IconKind::Stop if self.at_spring => self.abort_game(),
+            IconKind::Stop if self.kbd_state == KbdState::Paused => self.pause_confirm_quit(),
+            IconKind::PlayerPlus if self.start_keys_active && self.total_players < 8 => {
+                self.start_key = Some(self.total_players + 1);
+            }
+            IconKind::PlayerMinus if self.start_keys_active && self.total_players > 1 => {
+                self.start_key = Some(self.total_players - 1);
+            }
+            IconKind::OptionAngle if self.kbd_state == KbdState::Paused => {
+                self.pause_option_angle()
+            }
+            IconKind::OptionScroll if self.kbd_state == KbdState::Paused => {
+                self.pause_option_scrolling()
+            }
+            IconKind::OptionMusic if self.kbd_state == KbdState::Paused => {
+                self.pause_option_music()
+            }
+            IconKind::OptionResolution if self.kbd_state == KbdState::Paused => {
+                self.pause_option_resolution()
+            }
+            IconKind::Back if self.in_attract => {
+                self.kbd_state = KbdState::ConfirmQuit;
+                self.start_script(ScriptBind::ConfirmQuit);
+            }
+            IconKind::Yes => match self.kbd_state {
+                KbdState::ConfirmQuit => {
+                    self.quitting = true;
+                    self.kbd_state = KbdState::Main;
+                }
+                KbdState::PausedConfirmQuit => {
+                    self.dm.restore();
+                    self.quitting = true;
+                    self.kbd_state = KbdState::Main;
+                }
+                _ => (),
+            },
+            IconKind::No => match self.kbd_state {
+                KbdState::ConfirmQuit => {
+                    self.kbd_state = KbdState::Main;
+                }
+                KbdState::PausedConfirmQuit => {
+                    self.unpause();
+                }
+                _ => (),
+            },
+            _ => (),
+            // Keyboard, Fullscreen: handled in main
         }
     }
 }

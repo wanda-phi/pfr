@@ -11,7 +11,7 @@ use pfr::{
 use pixels::{Pixels, SurfaceTexture};
 use winit::{
     dpi::PhysicalSize,
-    event::{Event, KeyEvent, MouseButton, WindowEvent},
+    event::{Event, KeyEvent, MouseButton, TouchPhase, WindowEvent},
     event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
     window::WindowBuilder,
@@ -29,6 +29,8 @@ struct Game {
 struct Args {
     data: PathBuf,
     table: Option<u8>,
+    #[clap(long)]
+    touch: bool,
 }
 
 fn main() {
@@ -36,19 +38,18 @@ fn main() {
     let cstore = FileConfigStore::new(&args.data);
     let config = Config::load(&cstore);
     let event_loop = EventLoop::new().unwrap();
-    let dims = if config.options.resolution == Resolution::Full {
+    let mut dims = if config.options.resolution == Resolution::Full {
         (640, (576 + 33) * 2)
     } else {
         (640, 480)
     };
+    if args.touch {
+        dims.1 += 80;
+    }
     let window = WindowBuilder::new()
         .with_title("Pinball Fantasies")
         .with_min_inner_size(PhysicalSize::new(dims.0, dims.1))
-        .with_inner_size(if config.options.resolution == Resolution::Full {
-            PhysicalSize::new(640, (576 + 33) * 2)
-        } else {
-            PhysicalSize::new(640 * 2, 480 * 2)
-        })
+        .with_inner_size(PhysicalSize::new(dims.0, dims.1))
         .with_resizable(false)
         .build(&event_loop)
         .unwrap();
@@ -127,7 +128,10 @@ fn main() {
         |g| {
             // render
             if let Some(ref view) = g.game.view {
-                let dims = view.get_resolution();
+                let mut dims = view.get_resolution();
+                if g.game.args.touch {
+                    dims.1 += if dims.0 == 320 { 40 } else { 80 };
+                }
                 if dims != g.game.dims {
                     g.window.set_resizable(true);
                     // g.window.set_inner_size(PhysicalSize::new(dims.0, dims.1));
@@ -135,22 +139,69 @@ fn main() {
                     g.game.dims = dims;
                 }
             }
+            let double = g.game.dims.0 == 320;
             let frame = g.game.pixels.frame_mut();
             let width = g.game.dims.0 as usize;
-            let height = g.game.dims.1 as usize;
+            let mut height = g.game.dims.1 as usize;
+            if g.game.args.touch {
+                height -= if double { 40 } else { 80 };
+            }
             let mut data = vec![0u8; width * height];
             let mut pal = [(0u8, 0u8, 0u8); 256];
             if let Some(ref view) = g.game.view {
                 view.render(&mut data, &mut pal);
             }
+            let offset = if !g.game.args.touch {
+                0
+            } else if double {
+                40 * 320
+            } else {
+                80 * 640
+            };
             for y in 0..height {
                 for x in 0..width {
                     let pidx = y * width + x;
                     let pixel = usize::from(data[pidx]);
-                    frame[pidx * 4] = pal[pixel].0;
-                    frame[pidx * 4 + 1] = pal[pixel].1;
-                    frame[pidx * 4 + 2] = pal[pixel].2;
-                    frame[pidx * 4 + 3] = 0xff;
+                    frame[(offset + pidx) * 4] = pal[pixel].0;
+                    frame[(offset + pidx) * 4 + 1] = pal[pixel].1;
+                    frame[(offset + pidx) * 4 + 2] = pal[pixel].2;
+                    frame[(offset + pidx) * 4 + 3] = 0xff;
+                }
+            }
+            if g.game.args.touch {
+                for (i, x) in frame[..offset * 4].iter_mut().enumerate() {
+                    if i % 4 == 3 {
+                        *x = 0xff;
+                    } else {
+                        *x = 0;
+                    }
+                }
+                if let Some(ref view) = g.game.view {
+                    for (pos, icon) in view.get_touch_icons() {
+                        // TODO: icons
+                        let _ = icon;
+                        if double {
+                            for dy in 0..32 {
+                                for dx in 0..32 {
+                                    let pidx = (dy + 4) * width + (dx + 4 + 40 * pos);
+                                    frame[pidx * 4] = 0xff;
+                                    frame[pidx * 4 + 1] = 0xff;
+                                    frame[pidx * 4 + 2] = 0xff;
+                                    frame[pidx * 4 + 3] = 0xff;
+                                }
+                            }
+                        } else {
+                            for dy in 0..64 {
+                                for dx in 0..64 {
+                                    let pidx = (dy + 8) * width + (dx + 8 + 80 * pos);
+                                    frame[pidx * 4] = 0xff;
+                                    frame[pidx * 4 + 1] = 0xff;
+                                    frame[pidx * 4 + 2] = 0xff;
+                                    frame[pidx * 4 + 3] = 0xff;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             g.game.pixels.render().unwrap();
@@ -214,10 +265,28 @@ fn main() {
                             touch.location.x as f32,
                             touch.location.y as f32,
                         ));
-                        let pos = match pos {
+                        let mut pos = match pos {
                             Ok((x, y)) => (x as i32, y as i32),
                             Err((x, y)) => (x as i32, y as i32),
                         };
+                        if g.game.args.touch {
+                            let double = view.get_resolution().0 == 320;
+                            let unit = if double { 40 } else { 80 };
+                            if touch.phase == TouchPhase::Started
+                                && pos.1 >= 0
+                                && pos.1 < unit
+                                && pos.0 >= 0
+                                && pos.0 < view.get_resolution().0 as i32
+                            {
+                                let idx = (pos.0 / unit) as usize;
+                                for (iidx, icon) in view.get_touch_icons() {
+                                    if idx == iidx {
+                                        view.handle_touch_icon(icon);
+                                    }
+                                }
+                            }
+                            pos.1 -= unit;
+                        }
                         view.handle_touch(touch.id, touch.phase, pos);
                     }
                 }

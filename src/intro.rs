@@ -2,10 +2,12 @@
 
 use std::collections::HashSet;
 
+use arrayvec::ArrayVec;
 use unnamed_entity::EntityId;
 use winit::event::{ElementState, TouchPhase};
 use winit::keyboard::KeyCode;
 
+use crate::icons::IconKind;
 use crate::{
     assets::{
         iff::Image,
@@ -580,6 +582,12 @@ impl View for Intro {
         60
     }
 
+    fn get_touch_icons(&self) -> ArrayVec<(usize, IconKind), 8> {
+        [(6, IconKind::Fullscreen), (7, IconKind::Options)]
+            .into_iter()
+            .collect()
+    }
+
     fn run_frame(&mut self) -> Action {
         match self.left_state {
             LeftState::None => {}
@@ -1025,6 +1033,18 @@ impl View for Intro {
             TouchPhase::Moved | TouchPhase::Cancelled => {
                 self.touch_static.remove(&id);
             }
+        }
+    }
+
+    fn handle_touch_icon(&mut self, icon: IconKind) {
+        match icon {
+            IconKind::Options => {
+                self.key = KeyPress::Options;
+            }
+            IconKind::Back => {
+                self.key = KeyPress::Escape;
+            }
+            _ => (),
         }
     }
 }
