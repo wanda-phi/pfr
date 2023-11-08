@@ -202,6 +202,19 @@ fn main() {
                         }
                     }
                 }
+                Event::WindowEvent {
+                    event: WindowEvent::Touch(touch),
+                    ..
+                } => {
+                    if let Some(ref mut view) = g.game.view {
+                        let pos = g.game.pixels.window_pos_to_pixel((
+                            touch.location.x as f32,
+                            touch.location.y as f32,
+                        ));
+                        let pos = pos.ok().map(|(x, y)| (x as u32, y as u32));
+                        view.handle_touch(touch.id, touch.phase, pos);
+                    }
+                }
 
                 _ => {}
             }

@@ -837,4 +837,13 @@ impl View for Table {
             }
         }
     }
+
+    fn handle_touch(
+        &mut self,
+        _id: u64,
+        _phase: winit::event::TouchPhase,
+        _pos: Option<(u32, u32)>,
+    ) {
+        // TODO
+    }
 }

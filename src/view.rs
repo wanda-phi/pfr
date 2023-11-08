@@ -1,4 +1,4 @@
-use winit::event::{ElementState, VirtualKeyCode};
+use winit::event::{ElementState, TouchPhase, VirtualKeyCode};
 
 use crate::config::{HighScore, Options, TableId};
 
@@ -22,5 +22,6 @@ pub trait View {
     fn get_fps(&self) -> u32;
     fn run_frame(&mut self) -> Action;
     fn handle_key(&mut self, key: VirtualKeyCode, state: ElementState);
+    fn handle_touch(&mut self, id: u64, phase: TouchPhase, pos: Option<(u32, u32)>);
     fn render(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)]);
 }

@@ -1,5 +1,9 @@
+#![allow(clippy::collapsible_else_if)]
+
+use std::collections::HashSet;
+
 use unnamed_entity::EntityId;
-use winit::event::{ElementState, VirtualKeyCode};
+use winit::event::{ElementState, TouchPhase, VirtualKeyCode};
 
 use crate::{
     assets::{
@@ -20,6 +24,7 @@ pub struct Intro {
     key: KeyPress,
     left_state: LeftState,
     left_is_options: bool,
+    touch_static: HashSet<u64>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -40,6 +45,7 @@ enum KeyPress {
     Escape,
     Up,
     Down,
+    Option(u8),
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -106,7 +112,12 @@ impl Intro {
             key: KeyPress::None,
             left_state: LeftState::None,
             left_is_options: false,
+            touch_static: HashSet::new(),
         }
+    }
+
+    fn is_vertical(&self) -> bool {
+        self.config.options.resolution == Resolution::Full
     }
 
     fn clear_left(&self, data: &mut [u8], num: usize) {
@@ -157,7 +168,7 @@ impl Intro {
 
     fn render_left(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)], offset: usize) {
         pal[..16].copy_from_slice(&self.assets.left.cmap);
-        if self.config.options.resolution == Resolution::Full {
+        if self.is_vertical() {
             for y in 0..960 {
                 let sy = match y {
                     0..=373 => y / 2,
@@ -238,7 +249,7 @@ impl Intro {
     }
 
     fn render_tables(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)], f: impl Fn(usize) -> bool) {
-        if self.config.options.resolution == Resolution::Full {
+        if self.is_vertical() {
             self.render_table(data, pal, &f, TableId::Table1, 12, false);
             self.render_table(data, pal, &f, TableId::Table2, 132, false);
             self.render_table(data, pal, &f, TableId::Table3, 252, true);
@@ -318,7 +329,7 @@ impl Intro {
                         data[pidx + 640] = pix | 0x10;
                     }
                 }
-                if self.config.options.resolution == Resolution::Full {
+                if self.is_vertical() {
                     self.render_hiscores(data, font, TableId::Table1, 42);
                     self.render_hiscores(data, font, TableId::Table2, 150);
                     self.render_hiscores(data, font, TableId::Table3, 258);
@@ -337,11 +348,7 @@ impl Intro {
                 }
             }
             crate::assets::intro::TextPage::Text(text) => {
-                let base = if self.config.options.resolution == Resolution::Full {
-                    120
-                } else {
-                    0
-                };
+                let base = if self.is_vertical() { 120 } else { 0 };
                 for (ty, line) in text.iter().enumerate() {
                     self.render_line(data, font, line, 14 + ty * 18 + base);
                 }
@@ -356,11 +363,7 @@ impl Intro {
         lq: bool,
         cursor: Option<u8>,
     ) {
-        let pitch = if self.config.options.resolution == Resolution::Full {
-            36
-        } else {
-            18
-        };
+        let pitch = if self.is_vertical() { 36 } else { 18 };
         let font = if lq {
             &self.assets.font_lq
         } else {
@@ -423,7 +426,7 @@ impl Intro {
     }
 
     fn next_page(&mut self) {
-        if self.config.options.resolution == Resolution::Full {
+        if self.is_vertical() {
             self.text_page = TextPageId::from_idx(match self.text_page.to_idx() {
                 0 | 1 => 2,
                 2 => 3,
@@ -437,6 +440,114 @@ impl Intro {
         }
         if self.text_page == self.assets.text_pages.next_id() {
             self.text_page = TextPageId::from_idx(0);
+        }
+    }
+
+    fn handle_tap(&mut self, pos: (u32, u32)) {
+        if matches!(self.state, State::Slide(_, _)) {
+            self.key = KeyPress::Space;
+            return;
+        }
+        match self.state {
+            State::Slide(_, _) => {
+                self.key = KeyPress::Space;
+            }
+            State::InitDelay(_) => (),
+            State::Left(_) => (),
+            State::TablesGap(_) => (),
+            State::TablesWarpIn(_) | State::Tables(_) | State::TablesWarpOut(_, _) => {
+                if pos.0 < 128 {
+                    // left panel
+                    self.key = KeyPress::Space;
+                } else {
+                    let table = if self.is_vertical() {
+                        match pos.1 / 240 {
+                            0 => TableId::Table1,
+                            1 => TableId::Table2,
+                            2 => TableId::Table3,
+                            _ => TableId::Table4,
+                        }
+                    } else {
+                        if self.text_page.to_idx() % 2 == 0 {
+                            if pos.1 < 240 {
+                                TableId::Table1
+                            } else {
+                                TableId::Table2
+                            }
+                        } else {
+                            if pos.1 < 240 {
+                                TableId::Table3
+                            } else {
+                                TableId::Table4
+                            }
+                        }
+                    };
+                    self.key = KeyPress::Table(table);
+                }
+            }
+            State::TablesFadeOut(_, _) => (),
+            State::TextGap(_)
+            | State::TextFadeIn(_)
+            | State::Text(_)
+            | State::TextFadeOut(_, _) => {
+                self.key = KeyPress::Space;
+            }
+            State::OptionsGap(_) => (),
+            State::OptionsFadeIn(_) => (),
+            State::Options(_) => {
+                if pos.0 >= 128 {
+                    let idx = if self.is_vertical() {
+                        if pos.1 < 10 {
+                            0
+                        } else {
+                            (pos.1 - 10) / 72
+                        }
+                    } else {
+                        if pos.1 < 28 {
+                            0
+                        } else {
+                            (pos.1 - 28) / 36
+                        }
+                    };
+                    match idx {
+                        2..=7 => self.key = KeyPress::Option(idx as u8 - 2),
+                        9 => self.key = KeyPress::Escape,
+                        _ => (),
+                    }
+                }
+            }
+            State::OptionsFadeOut(_) => (),
+            State::FadeOut(_, _) => (),
+        }
+    }
+
+    fn handle_option(&mut self, which: u8) {
+        match which {
+            0 => {
+                if self.config.options.balls == 3 {
+                    self.config.options.balls = 5;
+                } else {
+                    self.config.options.balls = 3;
+                }
+            }
+            1 => self.config.options.angle_high = !self.config.options.angle_high,
+            2 => {
+                self.config.options.scroll_speed = match self.config.options.scroll_speed {
+                    ScrollSpeed::Hard => ScrollSpeed::Medium,
+                    ScrollSpeed::Medium => ScrollSpeed::Soft,
+                    ScrollSpeed::Soft => ScrollSpeed::Hard,
+                }
+            }
+            3 => self.config.options.no_music = !self.config.options.no_music,
+            4 => {
+                self.config.options.resolution = match self.config.options.resolution {
+                    Resolution::Normal => Resolution::High,
+                    Resolution::High => Resolution::Full,
+                    Resolution::Full => Resolution::Normal,
+                };
+            }
+            5 => self.config.options.mono = !self.config.options.mono,
+            _ => self.state = State::OptionsFadeOut(0),
         }
     }
 }
@@ -457,7 +568,7 @@ fn fade_pal(
 
 impl View for Intro {
     fn get_resolution(&self) -> (u32, u32) {
-        if self.config.options.resolution == Resolution::Full {
+        if self.is_vertical() {
             (640, 960)
         } else {
             (640, 480)
@@ -691,34 +802,10 @@ impl View for Intro {
             }
             State::Options(ref mut cursor) => {
                 match self.key {
-                    KeyPress::Enter | KeyPress::Space => match *cursor {
-                        0 => {
-                            if self.config.options.balls == 3 {
-                                self.config.options.balls = 5;
-                            } else {
-                                self.config.options.balls = 3;
-                            }
-                        }
-                        1 => self.config.options.angle_high = !self.config.options.angle_high,
-                        2 => {
-                            self.config.options.scroll_speed =
-                                match self.config.options.scroll_speed {
-                                    ScrollSpeed::Hard => ScrollSpeed::Medium,
-                                    ScrollSpeed::Medium => ScrollSpeed::Soft,
-                                    ScrollSpeed::Soft => ScrollSpeed::Hard,
-                                }
-                        }
-                        3 => self.config.options.no_music = !self.config.options.no_music,
-                        4 => {
-                            self.config.options.resolution = match self.config.options.resolution {
-                                Resolution::Normal => Resolution::High,
-                                Resolution::High => Resolution::Full,
-                                Resolution::Full => Resolution::Normal,
-                            };
-                        }
-                        5 => self.config.options.mono = !self.config.options.mono,
-                        _ => self.state = State::OptionsFadeOut(0),
-                    },
+                    KeyPress::Enter | KeyPress::Space => {
+                        let option = *cursor;
+                        self.handle_option(option);
+                    }
                     KeyPress::Escape => {
                         self.state = State::OptionsFadeOut(0);
                     }
@@ -736,6 +823,7 @@ impl View for Intro {
                             *cursor += 1;
                         }
                     }
+                    KeyPress::Option(option) => self.handle_option(option),
                     _ => {}
                 }
                 self.key = KeyPress::None;
@@ -789,11 +877,7 @@ impl View for Intro {
     fn render(&self, data: &mut [u8], pal: &mut [(u8, u8, u8)]) {
         match self.state {
             State::Slide(sidx, sstate) => {
-                let base = if self.config.options.resolution == Resolution::Full {
-                    240
-                } else {
-                    0
-                };
+                let base = if self.is_vertical() { 240 } else { 0 };
                 let slide = &self.assets.slides[sidx];
                 let img = &slide.image;
                 match img.data.dim().0 {
@@ -924,6 +1008,25 @@ impl View for Intro {
                 self.render_left(data, pal, 0);
                 let opal = pal.to_vec();
                 fade_pal(pal, &opal, (0, 0, 0), (80 - n) as usize, 80);
+            }
+        }
+    }
+
+    fn handle_touch(&mut self, id: u64, phase: TouchPhase, pos: Option<(u32, u32)>) {
+        match phase {
+            TouchPhase::Started => {
+                self.touch_static.insert(id);
+            }
+            TouchPhase::Ended => {
+                if self.touch_static.contains(&id) {
+                    self.touch_static.remove(&id);
+                    if let Some(pos) = pos {
+                        self.handle_tap(pos);
+                    }
+                }
+            }
+            TouchPhase::Moved | TouchPhase::Cancelled => {
+                self.touch_static.remove(&id);
             }
         }
     }
