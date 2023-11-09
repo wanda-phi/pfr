@@ -135,18 +135,18 @@ fn main() {
                 if dims != g.game.dims {
                     g.window.set_resizable(true);
                     if g.window.fullscreen().is_none() {
-                        if matches!(dims, (320, 240) | (320, 350)) {
-                            let _ = g
-                                .window
-                                .request_inner_size(PhysicalSize::new(dims.0 * 4, dims.1 * 4));
+                        let size = if matches!(dims, (320, 240) | (320, 350)) {
+                            PhysicalSize::new(dims.0 * 4, dims.1 * 4)
                         } else if dims == (640, 480) || dims.0 == 320 {
-                            let _ = g
-                                .window
-                                .request_inner_size(PhysicalSize::new(dims.0 * 2, dims.1 * 2));
+                            PhysicalSize::new(dims.0 * 2, dims.1 * 2)
                         } else {
-                            let _ = g
-                                .window
-                                .request_inner_size(PhysicalSize::new(dims.0, dims.1));
+                            PhysicalSize::new(dims.0, dims.1)
+                        };
+                        if let Some(size) = g.window.request_inner_size(size) {
+                            g.game
+                                .pixels
+                                .resize_surface(size.width, size.height)
+                                .unwrap();
                         }
                     }
                     g.game.pixels.resize_buffer(dims.0, dims.1).unwrap();
