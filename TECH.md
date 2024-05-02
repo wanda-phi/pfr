@@ -274,7 +274,7 @@ The characters included in the fonts include uppercase letters, digits, `-`, `(`
 
 - `0x00` is end of string
 - `0x20` is "no character" (ie. do not print anything, leave old contents of dot matrix at this position)
-- `0x2a is "blank" (ie. overwrite the character call with all-unlit dots)
+- `0x2a` is "blank" (ie. overwrite the character call with all-unlit dots)
 - `0x37-0x40` are the decimal digits `0-9`
 - `0x41-0x5a` are the uppercase letters `A-Z` (matching ASCII)
 - `0x5b` is `?`
