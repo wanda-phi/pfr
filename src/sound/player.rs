@@ -127,18 +127,18 @@ pub fn play(module: Mod, sequencer: Option<Arc<dyn Sequencer>>) -> Player {
         pattern_break: None,
         jump: None,
     };
-    
+
     let config = StreamConfig {
         channels: 2,
         sample_rate: SampleRate(sample_rate),
-        
+
         #[cfg(target_arch = "wasm32")]
         buffer_size: BufferSize::Fixed(sample_rate / 32),
-        
+
         #[cfg(not(target_arch = "wasm32"))]
         buffer_size: BufferSize::Fixed(sample_rate / 50),
     };
-    
+
     let stream = device
         .build_output_stream(
             &config,

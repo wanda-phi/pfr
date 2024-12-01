@@ -2,18 +2,19 @@
 name = "pfr"
 version = "0.1.0"
 edition = "2021"
+default-run = "pfr"
 
 [dependencies]
 arrayref = "0.3.7"
 clap = { version = "4.3.19", features = ["derive"] }
 cpal = "0.15"
 enum-map = { version = "2.6.1", features = ["serde"] }
-game-loop = { git = "https://github.com/tuzz/game-loop.git", rev = "8cc864ac", features = ["winit"] }
-ndarray = "0.15.6"
-pixels = "0.13.0"
+game-loop = { version = "1.3.0", features = ["winit"] }
+ndarray = "0.16.1"
+pixels = "0.14.0"
 png = "0.17.9"
 serde = { version = "1.0.183", features = ["derive"] }
-winit = { version = "0.29.3", features = ["rwh_05"]}
+winit = { version = "0.30.5", features = ["rwh_05"]}
 unnamed_entity = { version = "0.1", features = ["map"] }
 arrayvec = "0.7.4"
 rand = "0.8.5"
