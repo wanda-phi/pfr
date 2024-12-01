@@ -10,12 +10,13 @@ use pfr::{
     view::{Action, Route, View},
 };
 use pixels::{Pixels, SurfaceTexture};
+use std::sync::Arc;
 use winit::{
     dpi::PhysicalSize,
     event::{ElementState, Event, KeyEvent, MouseButton, TouchPhase, WindowEvent},
     event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
-    window::{Fullscreen, WindowBuilder},
+    window::{Fullscreen, Window},
 };
 
 struct Game {
@@ -39,29 +40,29 @@ fn main() {
     {
         let hash = web_sys::window().unwrap().location().hash().unwrap();
         let table = match hash.as_str() {
-        	"#1" => Some(1),
-        	"#2" => Some(2),
-        	"#3" => Some(3),
-        	"#4" => Some(4),
-        	_ => None
+            "#1" => Some(1),
+            "#2" => Some(2),
+            "#3" => Some(3),
+            "#4" => Some(4),
+            _ => None,
         };
-        
-        let args = Args{
+
+        let args = Args {
             data: PathBuf::from(r"meow"),
             table: Option::from(table),
-            touch: true // TODO
+            touch: true, // TODO
         };
         //std::panic::set_hook(Box::new(console_error_panic_hook::hook));
         //console_log::init_with_level(log::Level::Trace).expect("error initializing logger");
 
         wasm_bindgen_futures::spawn_local(run(args));
     }
-    
+
     #[cfg(not(target_arch = "wasm32"))]
     {
         let args = Args::parse();
         use futures::executor::block_on;
-        
+
         let future = run(args);
         block_on(future);
     }
@@ -69,8 +70,8 @@ fn main() {
 
 async fn run(args: Args) {
     #[cfg(target_arch = "wasm32")]
-    use pfr::wasm::{get_asset, WasmConfigStore, bind_mobile_events};
-    
+    use pfr::wasm::{bind_mobile_events, get_asset, WasmConfigStore};
+
     #[cfg(target_arch = "wasm32")]
     let cstore = WasmConfigStore::new(&args.data);
 
@@ -87,29 +88,21 @@ async fn run(args: Args) {
         dims.1 += 80;
     }
 
-    let window = WindowBuilder::new()
-            .with_title("Pinball Fantasies")
-            .with_min_inner_size(PhysicalSize::new(dims.0, dims.1))
-            .with_inner_size(PhysicalSize::new(dims.0, dims.1))
-            .with_resizable(true)
-            .build(&event_loop)
-            .expect("WindowBuilder error");
+    let window_attributes = Window::default_attributes()
+        .with_title("Pinball Fantasies")
+        .with_min_inner_size(PhysicalSize::new(dims.0, dims.1))
+        .with_inner_size(PhysicalSize::new(dims.0, dims.1))
+        .with_resizable(true);
+    let window = event_loop.create_window(window_attributes).unwrap();
     window.set_cursor_visible(false);
-
-    // TODO: the below could be better, but idk what would be the best way to make it so
-
-    #[cfg(target_arch = "wasm32")]
-    use std::rc::Rc;
-    
-    #[cfg(target_arch = "wasm32")]
-    let window = Rc::new(window);
+    let window = Arc::new(window);
 
     #[cfg(target_arch = "wasm32")]
     {
-        use winit::platform::web::WindowExtWebSys;
         use wasm_bindgen::JsCast;
-        
-        let window = std::rc::Rc::clone(&window);
+        use winit::platform::web::WindowExtWebSys;
+
+        let window = std::sync::Arc::clone(&window);
         let get_window_size = || {
             let client_window = web_sys::window().unwrap();
             PhysicalSize::new(
@@ -120,7 +113,7 @@ async fn run(args: Args) {
 
         window.set_min_inner_size(Some(get_window_size()));
         window.set_max_inner_size(Some(get_window_size()));
-        
+
         let client_window = web_sys::window().unwrap();
 
         web_sys::window()
@@ -142,7 +135,15 @@ async fn run(args: Args) {
             .unwrap();
         closure.forget();
 
-        let _ = client_window.document().unwrap().query_selector("canvas").unwrap().unwrap().dyn_into::<web_sys::HtmlElement>().unwrap().focus();
+        let _ = client_window
+            .document()
+            .unwrap()
+            .query_selector("canvas")
+            .unwrap()
+            .unwrap()
+            .dyn_into::<web_sys::HtmlElement>()
+            .unwrap()
+            .focus();
 
         bind_mobile_events();
     }
@@ -151,15 +152,20 @@ async fn run(args: Args) {
         #[cfg(not(target_arch = "wasm32"))]
         {
             let window_size = window.inner_size();
-            let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-            Pixels::new_async(dims.0, dims.1, surface_texture).await.unwrap()
+            let surface_texture =
+                SurfaceTexture::new(window_size.width, window_size.height, &window);
+            Pixels::new_async(dims.0, dims.1, surface_texture)
+                .await
+                .unwrap()
         }
         #[cfg(target_arch = "wasm32")]
         {
             let window_size = window.inner_size();
             // crashes if dims gets replaced with window_size.width, window_size.height - wtf?
             let surface_texture = SurfaceTexture::new(dims.0, dims.1, &window);
-            Pixels::new_async(dims.0, dims.1, surface_texture).await.unwrap()
+            Pixels::new_async(dims.0, dims.1, surface_texture)
+                .await
+                .unwrap()
         }
     };
 
@@ -171,16 +177,9 @@ async fn run(args: Args) {
         dims,
     };
 
-    // TODO: nasty hack :(
-    #[cfg(target_arch = "wasm32")]
-    let asdf = WindowBuilder::new().build(&event_loop).expect("WindowBuilder error");
-    #[cfg(not(target_arch = "wasm32"))]
-    let asdf = window;
-
     game_loop(
         event_loop,
-        // window.into(),
-        asdf.into(),
+        window,
         game,
         60,
         0.2,
@@ -217,12 +216,30 @@ async fn run(args: Args) {
                     let prgdata = std::fs::read(g.game.args.data.join(prg)).unwrap();
                     #[cfg(not(target_arch = "wasm32"))]
                     let moddata = std::fs::read(g.game.args.data.join(module)).unwrap();
-                    
+
                     #[cfg(target_arch = "wasm32")]
-                    let prgdata = get_asset(g.game.args.data.join(prg).file_name().unwrap().to_str().unwrap());
+                    let prgdata = get_asset(
+                        g.game
+                            .args
+                            .data
+                            .join(prg)
+                            .file_name()
+                            .unwrap()
+                            .to_str()
+                            .unwrap(),
+                    );
                     #[cfg(target_arch = "wasm32")]
-                    let moddata = get_asset(g.game.args.data.join(module).file_name().unwrap().to_str().unwrap());
-                    
+                    let moddata = get_asset(
+                        g.game
+                            .args
+                            .data
+                            .join(module)
+                            .file_name()
+                            .unwrap()
+                            .to_str()
+                            .unwrap(),
+                    );
+
                     let view: Box<dyn View> = match route {
                         Route::Intro(table) => {
                             Box::new(Intro::new(&prgdata, &moddata, g.game.config, table))

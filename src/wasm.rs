@@ -1,19 +1,18 @@
+use crate::config::ConfigStore;
+use js_sys::{Array, Uint8Array, JSON};
 use std::path::PathBuf;
 use wasm_bindgen::prelude::*;
-use js_sys::{JSON, Array, Uint8Array};
-use crate::config::ConfigStore;
 
 pub struct WasmConfigStore {
     pub path: PathBuf,
-    local_storage: web_sys::Storage
+    local_storage: web_sys::Storage,
 }
 
 impl WasmConfigStore {
-    pub fn new(path: impl Into<PathBuf>) -> Self {        
+    pub fn new(path: impl Into<PathBuf>) -> Self {
         let window = web_sys::window();
         let local_storage = window.unwrap().local_storage().unwrap().unwrap();
-        Self
-        {
+        Self {
             path: path.into(),
             local_storage,
         }
