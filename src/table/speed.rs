@@ -28,7 +28,6 @@ pub struct SpeedState {
     pub car_mods: u8,
     pub pedal_metal: bool,
     pub cur_speed: u8,
-    pub num_cyclone_target_jump: u16,
 }
 
 impl SpeedState {
@@ -51,7 +50,6 @@ impl SpeedState {
             car_mods: 0,
             pedal_metal: false,
             cur_speed: 0,
-            num_cyclone_target_jump: 30,
         }
     }
 }

@@ -653,7 +653,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6866f3bfdf8207509a033af1a75a7b08abda06bbaaeae6669323fd5a097df2e9"
 dependencies = [
  "enum-map-derive",
- "serde",
 ]
 
 [[package]]
@@ -1735,7 +1734,6 @@ dependencies = [
  "pixels",
  "png",
  "rand",
- "serde",
  "unnamed_entity",
  "wasm-bindgen",
  "wasm-bindgen-futures",
